@@ -100,6 +100,8 @@ void play(void) {
         case EVENT_INT:
           quit(0);
           break;
+        default:
+          break;
       }
     else
       switch (event.eventType) {
@@ -110,6 +112,8 @@ void play(void) {
 
         case EVENT_NETWORK:
           processPacket(&event);
+          break;
+        default:
           break;
       }
 
@@ -322,8 +326,23 @@ void peekStop() {
 /* ----------------------------------------------------------------------- */
 
 void shoot() {
+  //TODO
   M->scoreIs(M->score().value() - 1);
   UpdateScoreCard(M->myRatId().value());
+
+  if (M->hasMissile()) {
+    return;
+  } else {
+    M->hasMissileIs(TRUE);
+    M->dirMissileIs(M->dir());
+    M->xMissileIs(M->xloc());
+    M->yMissileIs(M->yloc());
+    timeval t;
+    gettimeofday(&t, NULL);
+    M->lastUpdateTimeIs(t);
+  }
+  updateView = TRUE;
+
 }
 
 /* ----------------------------------------------------------------------- */
@@ -349,6 +368,7 @@ void NewPosition(MazewarInstance::Ptr m) {
     newX = Loc(random() & (MAZEXMAX - 1));
     newY = Loc(random() & (MAZEYMAX - 1));
 
+    //TODO
     /* In real game, also check that square is
      unoccupied by another rat */
   }
@@ -416,6 +436,7 @@ void ConvertOutgoing(MW244BPacket *p) {
 
 /* This is just for the sample version, rewrite your own */
 void ratStates() {
+  //TODO
   /* In our sample version, we don't know about the state of any rats over
    the net, so this is a no-op */
 }
@@ -424,7 +445,56 @@ void ratStates() {
 
 /* This is just for the sample version, rewrite your own */
 void manageMissiles() {
-  /* Leave this up to you. */
+  //TODO
+  if (M->hasMissile() == FALSE)
+    return;
+
+  timeval pre;
+  timeval now;
+  pre = M->lastUpdateTime();
+  gettimeofday(&now, NULL);
+//  timeval_subtract(&result, now, pre);
+  if ((now.tv_sec - pre.tv_sec) * 1000
+      + (now.tv_usec - pre.tv_usec) / 1000> MISSILE_SPEED) {  //it's time to forward the missile
+    M->lastUpdateTimeIs(now);
+    int oldX = MY_X_MIS;
+    int oldY = MY_Y_MIS;
+    int newX = oldX;
+    int newY= oldY;
+    printf("oldX=%d, oldY=%d\n", oldX, oldY);
+    switch (MY_DIR) {
+      case NORTH:
+        newX = oldX + 1;
+        break;
+      case SOUTH:
+        newX = oldX - 1;
+        break;
+      case EAST:
+        newY = oldY + 1;
+        break;
+      case WEST:
+        newY = oldY - 1;
+        break;
+      default:
+        MWError("bad direction in Forward");
+    }
+    printf("direction is %d \n", MY_DIR);
+    printf("oldX=%d, oldY=%d\n", oldX, oldY);
+    printf("newX=%d, newY=%d\n", newX, newY);
+    if (!M->maze_[newX][newY]) {
+      printf("draw new missile\n");
+      M->xMissileIs(Loc(newX));
+      M->yMissileIs(Loc(newY));
+      showMissile(Loc(newX), Loc(newY), MY_DIR_MIS, Loc(oldX), Loc(oldY), true);
+    } else {
+      //already hit the wall:
+      printf("hit the wall\n");
+      M->hasMissileIs(FALSE);
+      clearSquare(Loc(oldX), Loc(oldY));
+    }
+    updateView = TRUE;
+
+  }
 }
 
 /* ----------------------------------------------------------------------- */
@@ -452,23 +522,23 @@ void DoViewUpdate() {
  */
 
 void sendPacketToPlayer(RatId ratId) {
-  /*
-   MW244BPacket pack;
-   DataStructureX *packX;
-
-   pack.type = PACKET_TYPE_X;
-   packX = (DataStructureX *) &pack.body;
-   packX->foo = d1;
-   packX->bar = d2;
-
-   ....
-
-   ConvertOutgoing(pack);
-
-   if (sendto((int)mySocket, &pack, sizeof(pack), 0,
-   (Sockaddr) destSocket, sizeof(Sockaddr)) < 0)
-   { MWError("Sample error") };
-   */
+//
+//   MW244BPacket pack;
+//   DataStructureX *packX;
+//
+//   pack.type = PACKET_TYPE_X;
+//   packX = (DataStructureX *) &pack.body;
+//   packX->foo = d1;
+//   packX->bar = d2;
+//
+//   ....
+//
+//   ConvertOutgoing(pack);
+//
+//   if (sendto((int)mySocket, &pack, sizeof(pack), 0,
+//   (Sockaddr) destSocket, sizeof(Sockaddr)) < 0)
+//   { MWError("Sample error") };
+//
 }
 
 /* ----------------------------------------------------------------------- */
@@ -495,6 +565,7 @@ void processPacket(MWEvent *eventPacket) {
  It is here to provide an example of how to open a UDP port.
  You might choose to use a different strategy
  */
+//TODO
 void netInit() {
   Sockaddr nullAddr;
   Sockaddr *thisHost;
@@ -574,3 +645,25 @@ void netInit() {
 }
 
 /* ----------------------------------------------------------------------- */
+
+int timeval_subtract(timeval *result, timeval x, timeval y) {
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x.tv_usec < y.tv_usec) {
+    int nsec = (y.tv_usec - x.tv_usec) / 1000000 + 1;
+    y.tv_usec -= 1000000 * nsec;
+    y.tv_sec += nsec;
+  }
+  if (x.tv_usec - y.tv_usec > 1000000) {
+    int nsec = (x.tv_usec - y.tv_usec) / 1000000;
+    y.tv_usec += 1000000 * nsec;
+    y.tv_sec -= nsec;
+  }
+
+  /* Compute the time remaining to wait.
+   tv_usec is certainly positive. */
+  result->tv_sec = x.tv_sec - y.tv_sec;
+  result->tv_usec = x.tv_usec - y.tv_usec;
+
+  /* Return 1 if result is negative. */
+  return x.tv_sec < y.tv_sec;
+}

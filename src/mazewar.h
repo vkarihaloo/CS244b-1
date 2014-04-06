@@ -48,6 +48,7 @@
 #include "Nominal.h"
 #include "Exception.h"
 #include <string>
+#include <time.h>
 /* fundamental constants */
 
 #ifndef	TRUE
@@ -56,13 +57,14 @@
 #endif	/* TRUE */
 
 /* You can modify this if you want to */
-#define	MAX_RATS	8
+#define	MAX_RATS	 8
+#define MISSILE_SPEED 500
 
 /* network stuff */
 /* Feel free to modify.  This is the simplest version we came up with */
 
 /* A unique MAZEPORT will be assigned to your team by the TA */
-#define	MAZEPORT	5000
+#define	MAZEPORT 5005
 /* The multicast group for Mazewar is 224.1.1.1 */
 #define MAZEGROUP       0xe0010101
 #define	MAZESERVICE	"mazewar244B"
@@ -284,6 +286,37 @@ class MazewarInstance : public Fwk::NamedInterface {
   void activeIs(int active) {
     this->active_ = active;
   }
+
+  inline bool hasMissile() const {
+    return hasMissile_;
+  }
+  void hasMissileIs(bool hasMissile) {
+    this->hasMissile_ = hasMissile;
+  }
+  inline Loc xMissile() const {
+    return xMissile_;
+  }
+  void xMissileIs(Loc xMissile) {
+    this->xMissile_ = xMissile;
+  }
+  inline Loc yMissile() const {
+    return yMissile_;
+  }
+  void yMissileIs(Loc yMissile) {
+    this->yMissile_ = yMissile;
+  }
+  inline Direction dirMissile() const {
+    return dirMissile_;
+  }
+  void dirMissileIs(Direction dirMissile) {
+    this->dirMissile_ = dirMissile;
+  }
+  inline timeval lastUpdateTime() {
+    return lastUpdateTime_;
+  }
+  void lastUpdateTimeIs(timeval lastUpdateTime) {
+    this->lastUpdateTime_ = lastUpdateTime;
+  }
   inline Rat rat(RatIndexType num) const {
     return mazeRats_[num.value()];
   }
@@ -303,7 +336,11 @@ class MazewarInstance : public Fwk::NamedInterface {
         xloc_(1),
         yloc_(3),
         xPeek_(0),
-        yPeek_(0) {
+        yPeek_(0),
+        hasMissile_(0),
+        xMissile_(0),
+        yMissile_(0),
+        dirMissile_(0) {
     myAddr_ = (Sockaddr*) malloc(sizeof(Sockaddr));
     if (!myAddr_) {
       printf("Error allocating sockaddr variable");
@@ -325,14 +362,23 @@ class MazewarInstance : public Fwk::NamedInterface {
   Loc xPeek_;
   Loc yPeek_;
   int active_;
+
+  bool hasMissile_;
+  Loc xMissile_;
+  Loc yMissile_;
+  Direction dirMissile_;
+  timeval lastUpdateTime_;
+
 };
 extern MazewarInstance::Ptr M;
 
 #define MY_RAT_INDEX		0
 #define MY_DIR			M->dir().value()
+#define MY_DIR_MIS M->dirMissile().value()
 #define MY_X_LOC		M->xloc().value()
 #define MY_Y_LOC		M->yloc().value()
-
+#define MY_X_MIS  M->xMissile().value()
+#define MY_Y_MIS  M->yMissile().value()
 /* events */
 
 #define	EVENT_A		1		/* user pressed "A" */
@@ -353,6 +399,7 @@ extern MazewarInstance::Ptr M;
 extern unsigned short ratBits[];
 /* replace this with appropriate definition of your own */
 typedef struct {
+  //TODO
   unsigned char type;
   u_long body[256];
 } MW244BPacket;
@@ -384,6 +431,7 @@ void FlipBitmaps(void);
 void bitFlip(BitCell *, int size);
 void SwapBitmaps(void);
 void byteSwap(BitCell *, int size);
+void showMissile(Loc, Loc, Direction, Loc, Loc, bool);
 
 /* init.c */
 void MazeInit(int, char **);
@@ -423,6 +471,7 @@ void DoViewUpdate(void);
 void sendPacketToPlayer(RatId);
 void processPacket(MWEvent *);
 void netInit(void);
+int timeval_subtract(timeval *result, timeval x, timeval y);
 
 /* winsys.c */
 void InitWindow(int, char **);
