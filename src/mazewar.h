@@ -49,6 +49,8 @@
 #include "Exception.h"
 #include <string>
 #include <time.h>
+#include "packet.h"
+
 /* fundamental constants */
 
 #ifndef	TRUE
@@ -86,6 +88,9 @@
 #define	RIGHT		1
 #define	REAR		2
 #define	FRONT		3
+
+#define WIN_SCORE 11
+#define LOSE_SCORE 5
 
 /* types */
 
@@ -160,7 +165,6 @@ class TokenId : public Ordinal<TokenId, long> {
 };
 
 class RatAppearance {
-
  public:
   RatAppearance()
       : x(1),
@@ -175,18 +179,53 @@ class RatAppearance {
 };
 
 class Rat {
-
  public:
   Rat()
       : playing(0),
         x(1),
         y(1),
-        dir(NORTH) {
+        dir(NORTH),
+        xMis(0),
+        yMis(0),
+        hasMissile(0),
+        score(0),
+        name(""),
+        id(0),
+        seqNum(0) {
+    int i, j;
+    for (i = 0; i < MAX_RATS; i++) {
+      H_base[i] = 0;
+      for (j = 0; j < MAX_RATS; j++) {
+        H_matrix[i][j] = -1;
+      }
+    }
   }
   ;
   bool playing;
   Loc x, y;
   Direction dir;
+  Loc xMis, yMis;
+  RatId id;
+  timeval lastHeartBeatTime;
+  int score;
+  bool hasMissile;
+  string name;
+  uint32_t seqNum;
+  int H_matrix[MAX_RATS][MAX_RATS];
+  int H_base[MAX_RATS];
+  void updateHeartbeat() {
+    gettimeofday(&(this->lastHeartBeatTime), NULL);
+  }
+  int calculateScore() {
+    score = H_base[id.value()];
+    for (int i = 0; i < MAX_RATS && i != id.value(); i++) {
+      score += H_matrix[id.value()][i] > 0 ? WIN_SCORE * H_matrix[id.value()][i] : 0;
+      score -= H_matrix[i][id.value()] > 0 ? LOSE_SCORE * H_matrix[id.value()][i] : 0;
+    }
+    score -= H_matrix[id.value()][id.value()];
+    return score;
+  }
+
 };
 
 typedef RatAppearance RatApp_type[MAX_RATS];
@@ -312,10 +351,10 @@ class MazewarInstance : public Fwk::NamedInterface {
     this->dirMissile_ = dirMissile;
   }
   inline timeval lastUpdateTime() {
-    return lastUpdateTime_;
+    return lastMisUpdateTime_;
   }
   void lastUpdateTimeIs(timeval lastUpdateTime) {
-    this->lastUpdateTime_ = lastUpdateTime;
+    this->lastMisUpdateTime_ = lastUpdateTime;
   }
   inline Rat rat(RatIndexType num) const {
     return mazeRats_[num.value()];
@@ -367,7 +406,9 @@ class MazewarInstance : public Fwk::NamedInterface {
   Loc xMissile_;
   Loc yMissile_;
   Direction dirMissile_;
-  timeval lastUpdateTime_;
+  timeval lastMisUpdateTime_;
+
+  timeval lastHeartBeatTime_;
 
 };
 extern MazewarInstance::Ptr M;
@@ -471,7 +512,12 @@ void DoViewUpdate(void);
 void sendPacketToPlayer(RatId);
 void processPacket(MWEvent *);
 void netInit(void);
-int timeval_subtract(timeval *result, timeval x, timeval y);
+bool isTimeOut(timeval, long);
+void sendPacket(PacketBase *);
+void sendHeartBeat();
+void sendNameRequest();
+void sendNameReply();
+void sendGameExit();
 
 /* winsys.c */
 void InitWindow(int, char **);

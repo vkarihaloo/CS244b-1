@@ -63,22 +63,27 @@ void play(void) {
       switch (event.eventType) {
         case EVENT_A:
           aboutFace();
+          sendHeartBeat();
           break;
 
         case EVENT_S:
           leftTurn();
+          sendHeartBeat();
           break;
 
         case EVENT_D:
           forward();
+          sendHeartBeat();
           break;
 
         case EVENT_F:
           rightTurn();
+          sendHeartBeat();
           break;
 
         case EVENT_BAR:
           backward();
+          sendHeartBeat();
           break;
 
         case EVENT_LEFT_D:
@@ -87,6 +92,7 @@ void play(void) {
 
         case EVENT_MIDDLE_D:
           shoot();
+          sendHeartBeat();
           break;
 
         case EVENT_RIGHT_D:
@@ -123,6 +129,8 @@ void play(void) {
 
     DoViewUpdate();
 
+
+    sendHeartBeat();
     /* Any info to send over network? */
   }
 }
@@ -327,8 +335,6 @@ void peekStop() {
 
 void shoot() {
   //TODO
-  M->scoreIs(M->score().value() - 1);
-  UpdateScoreCard(M->myRatId().value());
 
   if (M->hasMissile()) {
     return;
@@ -340,6 +346,10 @@ void shoot() {
     timeval t;
     gettimeofday(&t, NULL);
     M->lastUpdateTimeIs(t);
+
+    M->scoreIs(M->score().value() - 1);
+    UpdateScoreCard(M->myRatId().value());
+
   }
   updateView = TRUE;
 
@@ -449,18 +459,15 @@ void manageMissiles() {
   if (M->hasMissile() == FALSE)
     return;
 
-  timeval pre;
-  timeval now;
-  pre = M->lastUpdateTime();
+  timeval pre = M->lastUpdateTime();
+  timeval now ;
   gettimeofday(&now, NULL);
-//  timeval_subtract(&result, now, pre);
-  if ((now.tv_sec - pre.tv_sec) * 1000
-      + (now.tv_usec - pre.tv_usec) / 1000> MISSILE_SPEED) {  //it's time to forward the missile
+  if (isTimeOut(pre, MISSILE_SPEED)) {  //it's time to forward the missile
     M->lastUpdateTimeIs(now);
     int oldX = MY_X_MIS;
     int oldY = MY_Y_MIS;
     int newX = oldX;
-    int newY= oldY;
+    int newY = oldY;
     printf("oldX=%d, oldY=%d\n", oldX, oldY);
     switch (MY_DIR) {
       case NORTH:
@@ -478,17 +485,17 @@ void manageMissiles() {
       default:
         MWError("bad direction in Forward");
     }
-    printf("direction is %d \n", MY_DIR);
-    printf("oldX=%d, oldY=%d\n", oldX, oldY);
-    printf("newX=%d, newY=%d\n", newX, newY);
+//    printf("direction is %d \n", MY_DIR);
+//    printf("oldX=%d, oldY=%d\n", oldX, oldY);
+//    printf("newX=%d, newY=%d\n", newX, newY);
     if (!M->maze_[newX][newY]) {
-      printf("draw new missile\n");
+//      printf("draw new missile\n");
       M->xMissileIs(Loc(newX));
       M->yMissileIs(Loc(newY));
       showMissile(Loc(newX), Loc(newY), MY_DIR_MIS, Loc(oldX), Loc(oldY), true);
     } else {
       //already hit the wall:
-      printf("hit the wall\n");
+//      printf("hit the wall\n");
       M->hasMissileIs(FALSE);
       clearSquare(Loc(oldX), Loc(oldY));
     }
@@ -539,6 +546,46 @@ void sendPacketToPlayer(RatId ratId) {
 //   (Sockaddr) destSocket, sizeof(Sockaddr)) < 0)
 //   { MWError("Sample error") };
 //
+}
+
+void sendPacket(PacketBase *packet) {
+// TODO:
+//  if (DEBUG) {
+//    float rate = (float) rand() / (float) RAND_MAX;
+//    if (rate < PACKET_DROP_RATE) {
+//      delete pack;
+//      return;
+//    }
+//  }
+
+  if (sendto((int) M->theSocket(), &packet, sizeof(packet), 0,
+             (sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
+    MWError("send error");
+  }
+  delete packet;
+}
+
+void sendHeartBeat() {
+  HeartBeatPkt *heartBeatPkt = new HeartBeatPkt();
+
+  sendPacket(heartBeatPkt);
+}
+
+void sendNameRequest() {
+  NameRequestPkt *nameRequestPkt = new NameRequestPkt();
+
+  sendPacket(nameRequestPkt);
+}
+void sendNameReply(){
+  NameReplyPkt *nameReplyPkt = new NameReplyPkt();
+
+  sendPacket(nameReplyPkt);
+}
+
+void sendGameExit(){
+  GameExitPkt *gameExitPkt = new GameExitPkt();
+
+  sendPacket(gameExitPkt);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -645,25 +692,12 @@ void netInit() {
 }
 
 /* ----------------------------------------------------------------------- */
-
-int timeval_subtract(timeval *result, timeval x, timeval y) {
-  /* Perform the carry for the later subtraction by updating y. */
-  if (x.tv_usec < y.tv_usec) {
-    int nsec = (y.tv_usec - x.tv_usec) / 1000000 + 1;
-    y.tv_usec -= 1000000 * nsec;
-    y.tv_sec += nsec;
-  }
-  if (x.tv_usec - y.tv_usec > 1000000) {
-    int nsec = (x.tv_usec - y.tv_usec) / 1000000;
-    y.tv_usec += 1000000 * nsec;
-    y.tv_sec -= nsec;
-  }
-
-  /* Compute the time remaining to wait.
-   tv_usec is certainly positive. */
-  result->tv_sec = x.tv_sec - y.tv_sec;
-  result->tv_usec = x.tv_usec - y.tv_usec;
-
-  /* Return 1 if result is negative. */
-  return x.tv_sec < y.tv_sec;
+bool isTimeOut(timeval oldTime, long timeOut) {
+  struct timeval curTime;
+  gettimeofday(&curTime, NULL);
+  if ((curTime.tv_sec - oldTime.tv_sec) * 1000
+      + (curTime.tv_usec - oldTime.tv_usec) / 1000 > timeOut)
+    return true;
+  else
+    return false;
 }
