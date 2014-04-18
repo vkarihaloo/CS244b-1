@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <string.h>
+#include "mazewar.h"
 
 #define HEART_BEAT 0
 #define NAME_REQUEST 1
@@ -10,6 +11,7 @@
 
 #define MAX_RATS   8
 #define MAX_NAME 20
+
 
 class PacketBase {
  public:
@@ -39,12 +41,12 @@ class HeartBeatPkt : public PacketBase {
   int16_t misY;
   int16_t hitCount[MAX_RATS];
   HeartBeatPkt() {
-
   }
-
   HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
-               int16_t misX_, int16_t misY_)
+               int16_t misX_, int16_t misY_, int16_t *hitCount_)
+//  HeartBeatPkt::HeartBeatPkt(short unsigned int, int, uint32_t, short int, short int, short int, int&, short int, short int, int [8])'
+
       : PacketBase(HEART_BEAT, userId_, checkSum_, seqNum_),
         ratX(ratX_),
         ratY(ratY_),
@@ -53,10 +55,18 @@ class HeartBeatPkt : public PacketBase {
         misX(misX_),
         misY(misY_) {
     for (int i = 0; i < MAX_RATS; i++) {
-      hitCount[i] = 0;
+      hitCount[i] = hitCount_[i];
     }
-
   }
+//  void printPacket() {
+//    printf("received a heart beat (type=%d) from %d, seqNum=%d\n", type, userId,
+//           seqNum);
+//    printf("my state = %d \n", M->joinState());
+//  }
+//  void process() {
+//    printPacket();
+//
+//  }
 };
 
 class NameRequestPkt : public PacketBase {
@@ -75,12 +85,15 @@ class NameRequestPkt : public PacketBase {
     }
     name[i] = '\0';
   }
+
 };
 
 class NameReplyPkt : public PacketBase {
  public:
   char name[MAX_NAME];
   NameReplyPkt() {
+  }
+  ~NameReplyPkt() {
   }
   NameReplyPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                char *name_)
@@ -96,6 +109,8 @@ class NameReplyPkt : public PacketBase {
 class GameExitPkt : public PacketBase {
  public:
   GameExitPkt() {
+  }
+  ~GameExitPkt() {
   }
   GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_)
       : PacketBase(GAME_EXIT, userId_, checkSum_, seqNum_) {

@@ -60,7 +60,9 @@
 
 /* You can modify this if you want to */
 #define	MAX_RATS	 8
-#define MISSILE_SPEED 500
+#define MISSILE_SPEED 200
+#define JOIN_TIMEOUT 5000
+#define EXIT_TIMEOUT 5000
 
 /* network stuff */
 /* Feel free to modify.  This is the simplest version we came up with */
@@ -112,6 +114,12 @@ typedef struct {
   unsigned short bits[16];
 } BitCell;
 typedef char RatName[NAMESIZE];
+
+typedef enum JoinState {
+  WAITING,
+  INITING,
+  PLAYING
+};
 
 class Direction : public Ordinal<Direction, short> {
  public:
@@ -189,16 +197,8 @@ class Rat {
         yMis(0),
         hasMissile(0),
         score(0),
-        name(""),
         id(0),
         seqNum(0) {
-    int i, j;
-    for (i = 0; i < MAX_RATS; i++) {
-      H_base[i] = 0;
-      for (j = 0; j < MAX_RATS; j++) {
-        H_matrix[i][j] = -1;
-      }
-    }
   }
   ;
   bool playing;
@@ -209,21 +209,11 @@ class Rat {
   timeval lastHeartBeatTime;
   int score;
   bool hasMissile;
-  string name;
+  RatName name;
   uint32_t seqNum;
-  int H_matrix[MAX_RATS][MAX_RATS];
-  int H_base[MAX_RATS];
+
   void updateHeartbeat() {
     gettimeofday(&(this->lastHeartBeatTime), NULL);
-  }
-  int calculateScore() {
-    score = H_base[id.value()];
-    for (int i = 0; i < MAX_RATS && i != id.value(); i++) {
-      score += H_matrix[id.value()][i] > 0 ? WIN_SCORE * H_matrix[id.value()][i] : 0;
-      score -= H_matrix[i][id.value()] > 0 ? LOSE_SCORE * H_matrix[id.value()][i] : 0;
-    }
-    score -= H_matrix[id.value()][id.value()];
-    return score;
   }
 
 };
@@ -356,21 +346,51 @@ class MazewarInstance : public Fwk::NamedInterface {
   void lastUpdateTimeIs(timeval lastUpdateTime) {
     this->lastMisUpdateTime_ = lastUpdateTime;
   }
+  inline timeval lastHeartBeatTime() {
+    return lastHeartBeatTime_;
+  }
+  void lastHeartBeatTimeIs(timeval lastHeartBeatTime) {
+    this->lastHeartBeatTime_ = lastHeartBeatTime;
+  }
+
   inline Rat rat(RatIndexType num) const {
     return mazeRats_[num.value()];
   }
   void ratIs(Rat rat, RatIndexType num) {
     this->mazeRats_[num.value()] = rat;
   }
+  inline JoinState joinState() const {
+    return this->joinState_;
+  }
+  void joinStateIs(JoinState joinState) {
+    this->joinState_ = joinState;
+  }
+  inline uint32_t seqNum() const {
+    return this->seqNum_;
+  }
+  void seqNumIs(uint32_t seqNum) {
+    this->seqNum_ = seqNum;
+  }
+  int calculateScore(RatId id) {
+    int score__ = H_base[id.value()];
+    for (int i = 0; i < MAX_RATS && i != id.value(); i++) {
+      score__ +=
+          H_matrix[id.value()][i] > 0 ? WIN_SCORE * H_matrix[id.value()][i] : 0;
+      score__ -= H_matrix[i][id.value()] > 0 ?
+      LOSE_SCORE * H_matrix[id.value()][i] :
+                                               0;
+    }
+    score__ -= H_matrix[id.value()][id.value()];
+    score_ = Score(score__);
+    return score__;
+  }
 
-  MazeType maze_;
-  RatName myName_;
  protected:
   MazewarInstance(string s)
       : Fwk::NamedInterface(s),
         dir_(0),
         dirPeek_(0),
-        myRatId_(0),
+        myRatId_(7),
         score_(0),
         xloc_(1),
         yloc_(3),
@@ -379,19 +399,28 @@ class MazewarInstance : public Fwk::NamedInterface {
         hasMissile_(0),
         xMissile_(0),
         yMissile_(0),
-        dirMissile_(0) {
+        dirMissile_(0),
+        joinState_(WAITING),
+        seqNum_(888) {
     myAddr_ = (Sockaddr*) malloc(sizeof(Sockaddr));
     if (!myAddr_) {
       printf("Error allocating sockaddr variable");
     }
+    int i, j;
+    for (i = 0; i < MAX_RATS; i++) {
+      H_base[i] = 0;
+      for (j = 0; j < MAX_RATS; j++) {
+        H_matrix[i][j] = -1;
+      }
+    }
   }
-  Direction dir_;
-  Direction dirPeek_;
 
   long mazePort_;
   Sockaddr *myAddr_;
   Rat mazeRats_[MAX_RATS];
   RatId myRatId_;
+  Direction dir_;
+  Direction dirPeek_;
 
   bool peeking_;
   int theSocket_;
@@ -400,15 +429,21 @@ class MazewarInstance : public Fwk::NamedInterface {
   Loc yloc_;
   Loc xPeek_;
   Loc yPeek_;
-  int active_;
+  bool active_;
 
   bool hasMissile_;
   Loc xMissile_;
   Loc yMissile_;
   Direction dirMissile_;
   timeval lastMisUpdateTime_;
-
   timeval lastHeartBeatTime_;
+  uint32_t seqNum_;
+  JoinState joinState_;
+ public:
+  MazeType maze_;
+  RatName myName_;
+  int16_t H_matrix[MAX_RATS][MAX_RATS];
+  int16_t H_base[MAX_RATS];
 
 };
 extern MazewarInstance::Ptr M;
@@ -420,6 +455,7 @@ extern MazewarInstance::Ptr M;
 #define MY_Y_LOC		M->yloc().value()
 #define MY_X_MIS  M->xMissile().value()
 #define MY_Y_MIS  M->yMissile().value()
+#define MY_ID M->myRatId().value()
 /* events */
 
 #define	EVENT_A		1		/* user pressed "A" */
@@ -440,9 +476,8 @@ extern MazewarInstance::Ptr M;
 extern unsigned short ratBits[];
 /* replace this with appropriate definition of your own */
 typedef struct {
-  //TODO
-  unsigned char type;
-  u_long body[256];
+  uint8_t type;
+  uint8_t body[256];
 } MW244BPacket;
 
 typedef struct {
@@ -511,6 +546,11 @@ void manageMissiles(void);
 void DoViewUpdate(void);
 void sendPacketToPlayer(RatId);
 void processPacket(MWEvent *);
+void processHeartBeat(HeartBeatPkt *);
+void processNameRequest(NameRequestPkt *);
+void processNameReply(NameReplyPkt *);
+void processGameExit(GameExitPkt *);
+
 void netInit(void);
 bool isTimeOut(timeval, long);
 void sendPacket(PacketBase *);

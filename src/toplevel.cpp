@@ -56,79 +56,101 @@ void play(void) {
   MW244BPacket incoming;
 
   event.eventDetail = &incoming;
+  struct timeval joinTime;
+  gettimeofday(&joinTime, NULL);
 
   while (TRUE) {
     NextEvent(&event, M->theSocket());
-    if (!M->peeking())
-      switch (event.eventType) {
-        case EVENT_A:
-          aboutFace();
-          sendHeartBeat();
-          break;
-
-        case EVENT_S:
-          leftTurn();
-          sendHeartBeat();
-          break;
-
-        case EVENT_D:
-          forward();
-          sendHeartBeat();
-          break;
-
-        case EVENT_F:
-          rightTurn();
-          sendHeartBeat();
-          break;
-
-        case EVENT_BAR:
-          backward();
-          sendHeartBeat();
-          break;
-
-        case EVENT_LEFT_D:
-          peekLeft();
-          break;
-
-        case EVENT_MIDDLE_D:
-          shoot();
-          sendHeartBeat();
-          break;
-
-        case EVENT_RIGHT_D:
-          peekRight();
-          break;
-
-        case EVENT_NETWORK:
+    switch (M->joinState()) {
+      case WAITING:
+        if (event.eventType == EVENT_NETWORK) {
           processPacket(&event);
-          break;
+          printf("in waiting state, waiting for 3 seconds...\n");
+        }
+        if (isTimeOut(joinTime, JOIN_TIMEOUT)) {
+          M->joinStateIs(INITING);
+        }
+        break;
 
-        case EVENT_INT:
-          quit(0);
-          break;
-        default:
-          break;
-      }
-    else
-      switch (event.eventType) {
-        case EVENT_RIGHT_U:
-        case EVENT_LEFT_U:
-          peekStop();
-          break;
+      case INITING:
+        printf("in initing state\n");
+        M->joinStateIs(PLAYING);
+        break;
 
-        case EVENT_NETWORK:
-          processPacket(&event);
-          break;
-        default:
-          break;
-      }
+      case PLAYING:
+        if (!M->peeking())
+          switch (event.eventType) {
+            case EVENT_A:
+              aboutFace();
+              sendHeartBeat();
+              break;
+
+            case EVENT_S:
+              leftTurn();
+              sendHeartBeat();
+              break;
+
+            case EVENT_D:
+              forward();
+              sendHeartBeat();
+              break;
+
+            case EVENT_F:
+              rightTurn();
+              sendHeartBeat();
+              break;
+
+            case EVENT_BAR:
+              backward();
+              sendHeartBeat();
+              break;
+
+            case EVENT_LEFT_D:
+              peekLeft();
+              break;
+
+            case EVENT_MIDDLE_D:
+              shoot();
+              sendHeartBeat();
+              break;
+
+            case EVENT_RIGHT_D:
+              peekRight();
+              break;
+
+            case EVENT_NETWORK:
+              processPacket(&event);
+              break;
+
+            case EVENT_INT:
+              quit(0);
+              break;
+            default:
+              break;
+          }
+        else
+          switch (event.eventType) {
+            case EVENT_RIGHT_U:
+            case EVENT_LEFT_U:
+              peekStop();
+              break;
+
+            case EVENT_NETWORK:
+              processPacket(&event);
+              break;
+            default:
+              break;
+          }
+        break;
+      default:
+        break;
+    }
 
     ratStates(); /* clean house */
 
     manageMissiles();
 
     DoViewUpdate();
-
 
     sendHeartBeat();
     /* Any info to send over network? */
@@ -334,7 +356,7 @@ void peekStop() {
 /* ----------------------------------------------------------------------- */
 
 void shoot() {
-  //TODO
+//TODO
 
   if (M->hasMissile()) {
     return;
@@ -378,7 +400,7 @@ void NewPosition(MazewarInstance::Ptr m) {
     newX = Loc(random() & (MAZEXMAX - 1));
     newY = Loc(random() & (MAZEYMAX - 1));
 
-    //TODO
+//TODO
     /* In real game, also check that square is
      unoccupied by another rat */
   }
@@ -446,7 +468,7 @@ void ConvertOutgoing(MW244BPacket *p) {
 
 /* This is just for the sample version, rewrite your own */
 void ratStates() {
-  //TODO
+//TODO
   /* In our sample version, we don't know about the state of any rats over
    the net, so this is a no-op */
 }
@@ -455,12 +477,12 @@ void ratStates() {
 
 /* This is just for the sample version, rewrite your own */
 void manageMissiles() {
-  //TODO
+//TODO
   if (M->hasMissile() == FALSE)
     return;
 
   timeval pre = M->lastUpdateTime();
-  timeval now ;
+  timeval now;
   gettimeofday(&now, NULL);
   if (isTimeOut(pre, MISSILE_SPEED)) {  //it's time to forward the missile
     M->lastUpdateTimeIs(now);
@@ -468,7 +490,7 @@ void manageMissiles() {
     int oldY = MY_Y_MIS;
     int newX = oldX;
     int newY = oldY;
-    printf("oldX=%d, oldY=%d\n", oldX, oldY);
+//    printf("oldX=%d, oldY=%d\n", oldX, oldY);
     switch (MY_DIR) {
       case NORTH:
         newX = oldX + 1;
@@ -530,25 +552,26 @@ void DoViewUpdate() {
 
 void sendPacketToPlayer(RatId ratId) {
 //
-//   MW244BPacket pack;
-//   DataStructureX *packX;
+//  MW244BPacket pack;
+//  HeartBeatPkt *packX;
 //
-//   pack.type = PACKET_TYPE_X;
-//   packX = (DataStructureX *) &pack.body;
-//   packX->foo = d1;
-//   packX->bar = d2;
+//  pack.type = PACKET_TYPE_X;
+//  packX = (HeartBeatPkt *) &pack.body;
+//  packX->foo = d1;
+//  packX->bar = d2;
 //
-//   ....
+//  ....
 //
-//   ConvertOutgoing(pack);
+//  ConvertOutgoing(pack);
 //
-//   if (sendto((int)mySocket, &pack, sizeof(pack), 0,
-//   (Sockaddr) destSocket, sizeof(Sockaddr)) < 0)
-//   { MWError("Sample error") };
-//
+//  if (sendto((int) mySocket, &pack, sizeof(pack), 0, (Sockaddr) destSocket,
+//             sizeof(Sockaddr)) < 0) {
+//    MWError("Sample error")
+//  };
+
 }
 
-void sendPacket(PacketBase *packet) {
+void sendPacket(MW244BPacket *packet) {
 // TODO:
 //  if (DEBUG) {
 //    float rate = (float) rand() / (float) RAND_MAX;
@@ -558,7 +581,7 @@ void sendPacket(PacketBase *packet) {
 //    }
 //  }
 
-  if (sendto((int) M->theSocket(), &packet, sizeof(packet), 0,
+  if (sendto((int) M->theSocket(), (void *) packet, sizeof(packet), 0,
              (sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
   }
@@ -566,26 +589,93 @@ void sendPacket(PacketBase *packet) {
 }
 
 void sendHeartBeat() {
-  HeartBeatPkt *heartBeatPkt = new HeartBeatPkt();
+//  HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
+//                 int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
+//                 int16_t misX_, int16_t misY_, int16_t *hitCount_);
+  HeartBeatPkt *heartBeatPkt = new HeartBeatPkt((uint8_t) M->myRatId().value(),
+                                                (uint16_t) 0,
+//                                                (uint32_t) M->seqNum(),
+                                                777,
+                                                MY_X_LOC,
+                                                MY_Y_LOC,
+                                                MY_DIR,
+                                                (int16_t) M->H_base[MY_ID],
+                                                MY_X_MIS,
+                                                MY_Y_MIS,
+                                                (int16_t *) M->H_matrix[MY_ID]);
 
-  sendPacket(heartBeatPkt);
+  MW244BPacket *pack = new MW244BPacket();
+  HeartBeatPkt *packX;
+  pack->type = HEART_BEAT;
+  packX = (HeartBeatPkt *) &pack->body;
+  packX->type = heartBeatPkt->type;
+  assert(packX->type == HEART_BEAT);
+  packX->userId = heartBeatPkt->userId;
+  packX->checkSum = heartBeatPkt->checkSum;
+  packX->seqNum = heartBeatPkt->seqNum;
+
+  packX->ratX = heartBeatPkt->ratX;
+  packX->ratY = heartBeatPkt->ratY;
+  packX->ratD = heartBeatPkt->ratD;
+  packX->scoreBase = heartBeatPkt->scoreBase;
+  packX->misX = heartBeatPkt->misX;
+  packX->misY = heartBeatPkt->misY;
+  for (int i = 0; i < MAX_RATS; i++) {
+    packX->hitCount[i] = heartBeatPkt->hitCount[i];
+  }
+
+  sendPacket(pack);
+  timeval cur;
+  gettimeofday(&cur, NULL);
+  M->lastHeartBeatTimeIs(cur);
 }
 
 void sendNameRequest() {
   NameRequestPkt *nameRequestPkt = new NameRequestPkt();
 
-  sendPacket(nameRequestPkt);
+  MW244BPacket *pack = new MW244BPacket();
+  NameRequestPkt *packX;
+  pack->type = NAME_REQUEST;
+  packX = (NameRequestPkt *) &pack->body;
+  packX->type = nameRequestPkt->type;
+  assert(packX->type == NAME_REQUEST);
+  packX->userId = nameRequestPkt->userId;
+  packX->checkSum = nameRequestPkt->checkSum;
+  packX->seqNum = nameRequestPkt->seqNum;
+  packX->targetUserId = nameRequestPkt->targetUserId;
+//  strcpy(packX->name, char *NameRequestPkt->name);
+
+  sendPacket(pack);
 }
-void sendNameReply(){
+void sendNameReply() {
   NameReplyPkt *nameReplyPkt = new NameReplyPkt();
+  MW244BPacket *pack = new MW244BPacket();
+  NameReplyPkt *packX;
+  pack->type = NAME_REPLY;
+  packX = (NameReplyPkt *) &pack->body;
+  packX->type = nameReplyPkt->type;
+  assert(packX->type == NAME_REPLY);
+  packX->userId = nameReplyPkt->userId;
+  packX->checkSum = nameReplyPkt->checkSum;
+  packX->seqNum = nameReplyPkt->seqNum;
+//  strcpy(packX->name, char *nameReplyPkt->name);
 
-  sendPacket(nameReplyPkt);
+  sendPacket(pack);
 }
 
-void sendGameExit(){
+void sendGameExit() {
   GameExitPkt *gameExitPkt = new GameExitPkt();
+  MW244BPacket *pack = new MW244BPacket();
+  GameExitPkt *packX;
+  pack->type = GAME_EXIT;
+  packX = (GameExitPkt *) &pack->body;
+  packX->type = gameExitPkt->type;
+  assert(packX->type == GAME_EXIT);
+  packX->userId = gameExitPkt->userId;
+  packX->checkSum = gameExitPkt->checkSum;
+  packX->seqNum = gameExitPkt->seqNum;
 
-  sendPacket(gameExitPkt);
+  sendPacket(pack);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -593,17 +683,39 @@ void sendGameExit(){
 /* Sample of processPacket. */
 
 void processPacket(MWEvent *eventPacket) {
-  /*
-   MW244BPacket		*pack = eventPacket->eventDetail;
-   DataStructureX		*packX;
 
-   switch(pack->type) {
-   case PACKET_TYPE_X:
-   packX = (DataStructureX *) &(pack->body);
-   break;
-   case ...
-   }
-   */
+  MW244BPacket *pack = eventPacket->eventDetail;
+  switch (pack->type) {
+    case HEART_BEAT:
+      processHeartBeat((HeartBeatPkt *) &(pack->body));
+      break;
+    case NAME_REQUEST:
+      processNameRequest((NameRequestPkt *) &(pack->body));
+      break;
+    case NAME_REPLY:
+      processNameReply((NameReplyPkt *) &(pack->body));
+      break;
+    case GAME_EXIT:
+      processGameExit((GameExitPkt *) &(pack->body));
+      break;
+    default:
+      break;
+  }
+}
+
+void processHeartBeat(HeartBeatPkt *packet) {
+  printf("received a heart beat (type=%d) from %d, seqNum=%x\n", packet->type,
+         packet->userId, packet->seqNum);
+  printf("my state = %d \n", M->joinState());
+}
+void processNameRequest(NameRequestPkt *packet) {
+
+}
+void processNameReply(NameReplyPkt *packet) {
+
+}
+void processGameExit(GameExitPkt *packet) {
+
 }
 
 /* ----------------------------------------------------------------------- */
