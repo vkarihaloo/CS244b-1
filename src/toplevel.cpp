@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
 void play(void) {
   MWEvent event;
   MW244BPacket incoming;
+  bool isFirstPlayer = true;
 
   event.eventDetail = &incoming;
   struct timeval joinTime;
@@ -63,87 +64,101 @@ void play(void) {
     NextEvent(&event, M->theSocket());
     switch (M->joinState()) {
       case WAITING:
+        printf("in waiting state, waiting for 3 seconds\n");
         if (event.eventType == EVENT_NETWORK) {
           processPacket(&event);
-          printf("in waiting state, waiting for 3 seconds...\n");
+          isFirstPlayer = false;
         }
         if (isTimeOut(joinTime, JOIN_TIMEOUT)) {
           M->joinStateIs(INITING);
+          printf("in waiting state, timed out!!!\n");
         }
         break;
 
       case INITING:
         printf("in initing state\n");
         M->joinStateIs(PLAYING);
-        break;
+        if (isFirstPlayer) {
+          M->myRatIdIs(0);
+        for(int i=0; i<MAX_RATS; i++){
+          M->H_matrix[0][i] = 0;
+          M->H_matrix[i][0] = 0;
+        }
+        M->H_base[0] = 0;
+        M->setRatAsMe(0);
 
-      case PLAYING:
-        if (!M->peeking())
-          switch (event.eventType) {
-            case EVENT_A:
-              aboutFace();
-              sendHeartBeat();
-              break;
+      } else {
 
-            case EVENT_S:
-              leftTurn();
-              sendHeartBeat();
-              break;
+      }
+      break;
 
-            case EVENT_D:
-              forward();
-              sendHeartBeat();
-              break;
+    case PLAYING:
+      if (!M->peeking())
+        switch (event.eventType) {
+          case EVENT_A:
+            aboutFace();
+            sendHeartBeat();
+            break;
 
-            case EVENT_F:
-              rightTurn();
-              sendHeartBeat();
-              break;
+          case EVENT_S:
+            leftTurn();
+            sendHeartBeat();
+            break;
 
-            case EVENT_BAR:
-              backward();
-              sendHeartBeat();
-              break;
+          case EVENT_D:
+            forward();
+            sendHeartBeat();
+            break;
 
-            case EVENT_LEFT_D:
-              peekLeft();
-              break;
+          case EVENT_F:
+            rightTurn();
+            sendHeartBeat();
+            break;
 
-            case EVENT_MIDDLE_D:
-              shoot();
-              sendHeartBeat();
-              break;
+          case EVENT_BAR:
+            backward();
+            sendHeartBeat();
+            break;
 
-            case EVENT_RIGHT_D:
-              peekRight();
-              break;
+          case EVENT_LEFT_D:
+            peekLeft();
+            break;
 
-            case EVENT_NETWORK:
-              processPacket(&event);
-              break;
+          case EVENT_MIDDLE_D:
+            shoot();
+            sendHeartBeat();
+            break;
 
-            case EVENT_INT:
-              quit(0);
-              break;
-            default:
-              break;
-          }
-        else
-          switch (event.eventType) {
-            case EVENT_RIGHT_U:
-            case EVENT_LEFT_U:
-              peekStop();
-              break;
+          case EVENT_RIGHT_D:
+            peekRight();
+            break;
 
-            case EVENT_NETWORK:
-              processPacket(&event);
-              break;
-            default:
-              break;
-          }
-        break;
-      default:
-        break;
+          case EVENT_NETWORK:
+            processPacket(&event);
+            break;
+
+          case EVENT_INT:
+            quit(0);
+            break;
+          default:
+            break;
+        }
+      else
+        switch (event.eventType) {
+          case EVENT_RIGHT_U:
+          case EVENT_LEFT_U:
+            peekStop();
+            break;
+
+          case EVENT_NETWORK:
+            processPacket(&event);
+            break;
+          default:
+            break;
+        }
+      break;
+    default:
+      break;
     }
 
     ratStates(); /* clean house */
@@ -152,8 +167,9 @@ void play(void) {
 
     DoViewUpdate();
 
-    sendHeartBeat();
-    /* Any info to send over network? */
+    if (M->joinState() == PLAYING
+        && isTimeOut(M->lastHeartBeatTime(), HEART_BEAT_RATE))
+      sendHeartBeat();
   }
 }
 
@@ -580,12 +596,10 @@ void sendPacket(MW244BPacket *packet) {
 //      return;
 //    }
 //  }
-
-  if (sendto((int) M->theSocket(), (void *) packet, sizeof(packet), 0,
-             (sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
+  if (sendto((int) M->theSocket(), (void *) packet, sizeof(MW244BPacket), 0,
+             (struct sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
   }
-  delete packet;
 }
 
 void sendHeartBeat() {
@@ -594,8 +608,7 @@ void sendHeartBeat() {
 //                 int16_t misX_, int16_t misY_, int16_t *hitCount_);
   HeartBeatPkt *heartBeatPkt = new HeartBeatPkt((uint8_t) M->myRatId().value(),
                                                 (uint16_t) 0,
-//                                                (uint32_t) M->seqNum(),
-                                                777,
+                                                (uint32_t) M->seqNum(),
                                                 MY_X_LOC,
                                                 MY_Y_LOC,
                                                 MY_DIR,
@@ -604,78 +617,53 @@ void sendHeartBeat() {
                                                 MY_Y_MIS,
                                                 (int16_t *) M->H_matrix[MY_ID]);
 
+//  heartBeatPkt->printPacket();
+
   MW244BPacket *pack = new MW244BPacket();
-  HeartBeatPkt *packX;
-  pack->type = HEART_BEAT;
-  packX = (HeartBeatPkt *) &pack->body;
-  packX->type = heartBeatPkt->type;
-  assert(packX->type == HEART_BEAT);
-  packX->userId = heartBeatPkt->userId;
-  packX->checkSum = heartBeatPkt->checkSum;
-  packX->seqNum = heartBeatPkt->seqNum;
-
-  packX->ratX = heartBeatPkt->ratX;
-  packX->ratY = heartBeatPkt->ratY;
-  packX->ratD = heartBeatPkt->ratD;
-  packX->scoreBase = heartBeatPkt->scoreBase;
-  packX->misX = heartBeatPkt->misX;
-  packX->misY = heartBeatPkt->misY;
-  for (int i = 0; i < MAX_RATS; i++) {
-    packX->hitCount[i] = heartBeatPkt->hitCount[i];
+  memcpy(pack, heartBeatPkt, sizeof(HeartBeatPkt));
+  char *aslong = (char *) pack;
+  printf(">>>>>>>===== sending a heart beat packet\n");
+  for (int i = 0; i < 35; i++) {
+    printf("%02x ", aslong[i]);
+    if (i % 4 == 3)
+      printf("\n");
   }
-
+  printf("\n");
   sendPacket(pack);
+  delete heartBeatPkt;
+  delete pack;
   timeval cur;
   gettimeofday(&cur, NULL);
   M->lastHeartBeatTimeIs(cur);
+
 }
 
 void sendNameRequest() {
   NameRequestPkt *nameRequestPkt = new NameRequestPkt();
-
   MW244BPacket *pack = new MW244BPacket();
-  NameRequestPkt *packX;
-  pack->type = NAME_REQUEST;
-  packX = (NameRequestPkt *) &pack->body;
-  packX->type = nameRequestPkt->type;
-  assert(packX->type == NAME_REQUEST);
-  packX->userId = nameRequestPkt->userId;
-  packX->checkSum = nameRequestPkt->checkSum;
-  packX->seqNum = nameRequestPkt->seqNum;
-  packX->targetUserId = nameRequestPkt->targetUserId;
-//  strcpy(packX->name, char *NameRequestPkt->name);
-
+  memcpy(pack, nameRequestPkt, sizeof(NameRequestPkt));
   sendPacket(pack);
+  delete nameRequestPkt;
+  delete pack;
 }
 void sendNameReply() {
   NameReplyPkt *nameReplyPkt = new NameReplyPkt();
   MW244BPacket *pack = new MW244BPacket();
-  NameReplyPkt *packX;
-  pack->type = NAME_REPLY;
-  packX = (NameReplyPkt *) &pack->body;
-  packX->type = nameReplyPkt->type;
-  assert(packX->type == NAME_REPLY);
-  packX->userId = nameReplyPkt->userId;
-  packX->checkSum = nameReplyPkt->checkSum;
-  packX->seqNum = nameReplyPkt->seqNum;
-//  strcpy(packX->name, char *nameReplyPkt->name);
-
+  memcpy(pack, nameReplyPkt, sizeof(NameReplyPkt));
   sendPacket(pack);
+  delete nameReplyPkt;
+  delete pack;
+  //  strcpy(packX->name, char *nameReplyPkt->name);
+
 }
 
 void sendGameExit() {
   GameExitPkt *gameExitPkt = new GameExitPkt();
   MW244BPacket *pack = new MW244BPacket();
-  GameExitPkt *packX;
-  pack->type = GAME_EXIT;
-  packX = (GameExitPkt *) &pack->body;
-  packX->type = gameExitPkt->type;
-  assert(packX->type == GAME_EXIT);
-  packX->userId = gameExitPkt->userId;
-  packX->checkSum = gameExitPkt->checkSum;
-  packX->seqNum = gameExitPkt->seqNum;
-
+  memcpy(pack, gameExitPkt, sizeof(GameExitPkt));
   sendPacket(pack);
+  delete gameExitPkt;
+  delete pack;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -683,20 +671,20 @@ void sendGameExit() {
 /* Sample of processPacket. */
 
 void processPacket(MWEvent *eventPacket) {
-
+  printf("!! !! !! received a packet!\n");
   MW244BPacket *pack = eventPacket->eventDetail;
   switch (pack->type) {
     case HEART_BEAT:
-      processHeartBeat((HeartBeatPkt *) &(pack->body));
+      processHeartBeat((HeartBeatPkt *)pack);
       break;
     case NAME_REQUEST:
-      processNameRequest((NameRequestPkt *) &(pack->body));
+      processNameRequest((NameRequestPkt *)pack);
       break;
     case NAME_REPLY:
-      processNameReply((NameReplyPkt *) &(pack->body));
+      processNameReply((NameReplyPkt *)pack);
       break;
     case GAME_EXIT:
-      processGameExit((GameExitPkt *) &(pack->body));
+      processGameExit((GameExitPkt *)pack);
       break;
     default:
       break;
@@ -704,9 +692,35 @@ void processPacket(MWEvent *eventPacket) {
 }
 
 void processHeartBeat(HeartBeatPkt *packet) {
-  printf("received a heart beat (type=%d) from %d, seqNum=%x\n", packet->type,
-         packet->userId, packet->seqNum);
+  int rat_id = packet->userId;
+  int i;
+  printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
+         (packet->userId), ntohl(packet->seqNum));
+  char *aslong = (char *) packet;
+  for (int i = 0; i < 35; i++) {
+    printf("%02x ", aslong[i]);
+    if (i % 4 == 3)
+      printf("\n");
+  }
+  printf("\n");
   printf("my state = %d \n", M->joinState());
+
+  //update a row of H_matrix and H_base
+  for (i = 0; i < MAX_RATS; i++) {
+    M->H_matrix[rat_id][i] = ntohs(packet->hitCount[i]);
+  }
+  M->H_base[rat_id] = ntohs(packet->scoreBase);
+  //update positions
+  M->mazeRats_[rat_id].x = Loc(ntohs(packet->ratX));
+  M->mazeRats_[rat_id].y = Loc(ntohs(packet->ratY));
+  M->mazeRats_[rat_id].dir = Direction(ntohs(packet->ratD));
+  M->mazeRats_[rat_id].xMis = Loc(ntohs(packet->misX));
+  M->mazeRats_[rat_id].yMis = Loc(ntohs(packet->misY));
+  //update score
+  for (i = 0; i < MAX_RATS; i++) {
+    M->calculateScore(i);
+  }
+
 }
 void processNameRequest(NameRequestPkt *packet) {
 
@@ -793,9 +807,10 @@ void netInit() {
   printf("\n");
 
   /* set up some stuff strictly for this local sample */
-  M->myRatIdIs(0);
-  M->scoreIs(0);
-  SetMyRatIndexType(0);
+  //TODO:
+//  M->myRatIdIs(0);
+//  M->scoreIs(0);
+//  SetMyRatIndexType(0);
 
   /* Get the multi-cast address ready to use in SendData()
    calls. */

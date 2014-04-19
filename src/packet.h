@@ -25,11 +25,11 @@ class PacketBase {
              uint32_t seqNum_)
       : type(type_),
         userId(userId_),
-        checkSum(checkSum_),
-        seqNum(seqNum_) {
-
+        checkSum(htons(checkSum_)),
+        seqNum(htonl(seqNum_)) {
+ printf("size of base is %d\n", sizeof(PacketBase));
   }
-};
+}__attribute__ ((packed));
 
 class HeartBeatPkt : public PacketBase {
  public:
@@ -45,29 +45,29 @@ class HeartBeatPkt : public PacketBase {
   HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
                int16_t misX_, int16_t misY_, int16_t *hitCount_)
-//  HeartBeatPkt::HeartBeatPkt(short unsigned int, int, uint32_t, short int, short int, short int, int&, short int, short int, int [8])'
 
       : PacketBase(HEART_BEAT, userId_, checkSum_, seqNum_),
-        ratX(ratX_),
-        ratY(ratY_),
-        ratD(ratD_),
-        scoreBase(scoreBase_),
-        misX(misX_),
-        misY(misY_) {
+        ratX(htons(ratX_)),
+        ratY(htons(ratY_)),
+        ratD(htons(ratD_)),
+        scoreBase(htons(scoreBase_)),
+        misX(htons(misX_)),
+        misY(htons(misY_)) {
     for (int i = 0; i < MAX_RATS; i++) {
-      hitCount[i] = hitCount_[i];
+      hitCount[i] = htons(hitCount_[i]);
     }
   }
-//  void printPacket() {
-//    printf("received a heart beat (type=%d) from %d, seqNum=%d\n", type, userId,
-//           seqNum);
-//    printf("my state = %d \n", M->joinState());
-//  }
-//  void process() {
-//    printPacket();
-//
-//  }
-};
+  void printPacket() {
+    printf(" type=%d from %d, seqNum=%d\n", type, userId,
+           seqNum);
+    printf("H_matrix is");
+    for (int i=0; i<8; i++)
+      printf("%d", hitCount[i]);
+  }
+
+}__attribute__ ((packed));
+
+
 
 class NameRequestPkt : public PacketBase {
  public:
@@ -86,7 +86,7 @@ class NameRequestPkt : public PacketBase {
     name[i] = '\0';
   }
 
-};
+}__attribute__ ((packed));
 
 class NameReplyPkt : public PacketBase {
  public:
@@ -104,7 +104,7 @@ class NameReplyPkt : public PacketBase {
     }
     name[i] = '\0';
   }
-};
+}__attribute__ ((packed));
 
 class GameExitPkt : public PacketBase {
  public:
@@ -116,6 +116,6 @@ class GameExitPkt : public PacketBase {
       : PacketBase(GAME_EXIT, userId_, checkSum_, seqNum_) {
 
   }
-};
+}__attribute__ ((packed));
 
 #endif

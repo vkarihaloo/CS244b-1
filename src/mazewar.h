@@ -63,6 +63,7 @@
 #define MISSILE_SPEED 200
 #define JOIN_TIMEOUT 5000
 #define EXIT_TIMEOUT 5000
+#define HEART_BEAT_RATE 2000
 
 /* network stuff */
 /* Feel free to modify.  This is the simplest version we came up with */
@@ -158,10 +159,10 @@ class RatIndexType : public Ordinal<RatIndexType, int> {
   }
 };
 
-class RatId : public Ordinal<RatId, unsigned short> {
+class RatId : public Ordinal<RatId, unsigned char> {
  public:
-  RatId(unsigned short num)
-      : Ordinal<RatId, unsigned short>(num) {
+  RatId(unsigned char num)
+      : Ordinal<RatId, unsigned char>(num) {
   }
 };
 
@@ -201,6 +202,23 @@ class Rat {
         seqNum(0) {
   }
   ;
+  void setRat(bool playing_, Loc x_, Loc y_, Direction dir_, Loc xMis_,
+              Loc yMis_, RatId id_, timeval lastHeartBeatTime_, int score_,
+              bool hasMissile_, char * name_, uint32_t seqNum_) {
+    playing = playing_;
+    x = x_;
+    y = y_;
+    dir = dir_;
+    xMis = xMis_;
+    yMis = yMis_;
+    id = id_;
+    lastHeartBeatTime = lastHeartBeatTime_;
+    score = score_;
+    hasMissile = hasMissile_;
+    name = name_;  //TODO
+    seqNum = seqNum_;
+
+  }
   bool playing;
   Loc x, y;
   Direction dir;
@@ -209,13 +227,12 @@ class Rat {
   timeval lastHeartBeatTime;
   int score;
   bool hasMissile;
-  RatName name;
+  string name;
   uint32_t seqNum;
 
   void updateHeartbeat() {
     gettimeofday(&(this->lastHeartBeatTime), NULL);
   }
-
 };
 
 typedef RatAppearance RatApp_type[MAX_RATS];
@@ -371,18 +388,35 @@ class MazewarInstance : public Fwk::NamedInterface {
   void seqNumIs(uint32_t seqNum) {
     this->seqNum_ = seqNum;
   }
-  int calculateScore(RatId id) {
-    int score__ = H_base[id.value()];
-    for (int i = 0; i < MAX_RATS && i != id.value(); i++) {
-      score__ +=
-          H_matrix[id.value()][i] > 0 ? WIN_SCORE * H_matrix[id.value()][i] : 0;
-      score__ -= H_matrix[i][id.value()] > 0 ?
-      LOSE_SCORE * H_matrix[id.value()][i] :
-                                               0;
+  int calculateScore(int ratId) {
+    int score__ = H_base[ratId];
+    for (int i = 0; i < MAX_RATS && i != ratId; i++) {
+      score__ += H_matrix[ratId][i] > 0 ? WIN_SCORE * H_matrix[ratId][i] : 0;
+      score__ -= H_matrix[i][ratId] > 0 ?
+      LOSE_SCORE * H_matrix[ratId][i] :
+                                          0;
     }
-    score__ -= H_matrix[id.value()][id.value()];
-    score_ = Score(score__);
+    score__ -= H_matrix[ratId][ratId];
+    mazeRats_[ratId].score = score__;
     return score__;
+  }
+  void setRatAsMe(int ratId) {
+
+    mazeRats_[ratId].playing = true;
+    mazeRats_[ratId].x = xloc_;
+    mazeRats_[ratId].y = yloc_;
+    mazeRats_[ratId].dir = dir_;
+    mazeRats_[ratId].xMis = xMissile_;
+    mazeRats_[ratId].yMis = yMissile_;
+    mazeRats_[ratId].id = myRatId_;
+    mazeRats_[ratId].lastHeartBeatTime = lastMisUpdateTime_;
+    mazeRats_[ratId].score = score_.value();
+    mazeRats_[ratId].hasMissile = hasMissile_;
+    mazeRats_[ratId].name = name();
+
+
+    mazeRats_[ratId].seqNum = seqNum_;
+
   }
 
  protected:
@@ -390,7 +424,7 @@ class MazewarInstance : public Fwk::NamedInterface {
       : Fwk::NamedInterface(s),
         dir_(0),
         dirPeek_(0),
-        myRatId_(7),
+        myRatId_(0),
         score_(0),
         xloc_(1),
         yloc_(3),
@@ -401,13 +435,14 @@ class MazewarInstance : public Fwk::NamedInterface {
         yMissile_(0),
         dirMissile_(0),
         joinState_(WAITING),
-        seqNum_(888) {
+        seqNum_(0x8888) {
     myAddr_ = (Sockaddr*) malloc(sizeof(Sockaddr));
     if (!myAddr_) {
       printf("Error allocating sockaddr variable");
     }
     int i, j;
     for (i = 0; i < MAX_RATS; i++) {
+      printf("initializing M!!!!!=================\n");
       H_base[i] = 0;
       for (j = 0; j < MAX_RATS; j++) {
         H_matrix[i][j] = -1;
@@ -417,7 +452,7 @@ class MazewarInstance : public Fwk::NamedInterface {
 
   long mazePort_;
   Sockaddr *myAddr_;
-  Rat mazeRats_[MAX_RATS];
+
   RatId myRatId_;
   Direction dir_;
   Direction dirPeek_;
@@ -444,6 +479,7 @@ class MazewarInstance : public Fwk::NamedInterface {
   RatName myName_;
   int16_t H_matrix[MAX_RATS][MAX_RATS];
   int16_t H_base[MAX_RATS];
+  Rat mazeRats_[MAX_RATS];
 
 };
 extern MazewarInstance::Ptr M;
