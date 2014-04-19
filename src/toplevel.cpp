@@ -54,7 +54,6 @@ int main(int argc, char *argv[]) {
 void play(void) {
   MWEvent event;
   MW244BPacket incoming;
-  bool isFirstPlayer = true;
 
   event.eventDetail = &incoming;
   struct timeval joinTime;
@@ -600,6 +599,7 @@ void sendPacket(MW244BPacket *packet) {
              (struct sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
   }
+  M->seqNumIs(M->seqNum()+1);
 }
 
 void sendHeartBeat() {
@@ -635,6 +635,7 @@ void sendHeartBeat() {
   timeval cur;
   gettimeofday(&cur, NULL);
   M->lastHeartBeatTimeIs(cur);
+
 
 }
 
