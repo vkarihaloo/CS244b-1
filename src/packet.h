@@ -2,7 +2,11 @@
 #define PACKET_H
 
 #include <string.h>
-#include "mazewar.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+//#include "mazewar.h"
 
 #define HEART_BEAT 0
 #define NAME_REQUEST 1
@@ -11,7 +15,6 @@
 
 #define MAX_RATS   8
 #define MAX_NAME 20
-
 
 class PacketBase {
  public:
@@ -27,8 +30,8 @@ class PacketBase {
         userId(userId_),
         checkSum(htons(checkSum_)),
         seqNum(htonl(seqNum_)) {
- printf("size of base is %d\n", sizeof(PacketBase));
   }
+  void printPacket(bool isSend);
 }__attribute__ ((packed));
 
 class HeartBeatPkt : public PacketBase {
@@ -57,29 +60,31 @@ class HeartBeatPkt : public PacketBase {
       hitCount[i] = htons(hitCount_[i]);
     }
   }
-  void printPacket() {
-//    printf(" type=%d from %d, seqNum=%d\n", type, userId,
-//           seqNum);
-//    printf("H_matrix is");
-//    for (int i=0; i<8; i++)
-//      printf("%d", hitCount[i]);
+//  void printPacket(bool isSend) {
+////    printf(" type=%d from %d, seqNum=%d\n", type, userId,
+////           seqNum);
+////    printf("H_matrix is");
+////    for (int i=0; i<8; i++)
+////      printf("%d", hitCount[i]);
+////
+//    int i;
+//    if (isSend) {
+//      printf("<<<<<===== sending a heart beat packet\n");
+//    } else {
+//      printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
+//             (userId), ntohl(seqNum));
+//    }
 //
-    int i;
-      /* print packet */
-      printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
-             (userId), ntohl(seqNum));
-      char *aslong = (char *)this;
-      for (int i = 0; i < 35; i++) {
-        printf("%02x ", aslong[i]);
-        if (i % 4 == 3)
-          printf("\n");
-      }
-      printf("\n");
-  }
+//    char *aslong = (char *) this;
+//    for (int i = 0; i < 35; i++) {
+//      printf("%02x ", aslong[i]);
+//      if (i % 4 == 3)
+//        printf("\n");
+//    }
+//    printf("\n");
+//  }
 
 }__attribute__ ((packed));
-
-
 
 class NameRequestPkt : public PacketBase {
  public:
@@ -88,7 +93,7 @@ class NameRequestPkt : public PacketBase {
   NameRequestPkt() {
   }
   NameRequestPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
-                 uint8_t targetUserId_, char *name_)
+                 uint8_t targetUserId_, const char *name_)
       : PacketBase(NAME_REQUEST, userId_, checkSum_, seqNum_),
         targetUserId(targetUserId_) {
     int i;
@@ -108,7 +113,7 @@ class NameReplyPkt : public PacketBase {
   ~NameReplyPkt() {
   }
   NameReplyPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
-               char *name_)
+               const char *name_)
       : PacketBase(NAME_REPLY, userId_, checkSum_, seqNum_) {
     int i;
     for (i = 0; i < strlen(name_) && i < MAX_NAME - 1; i++) {

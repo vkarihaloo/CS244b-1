@@ -56,7 +56,7 @@ void choose_id() {
   for (i = 0; i < MAX_RATS; i++) {
     sum[i] = 0;
     for (j = 0; j < MAX_RATS; j++) {
-     printf("in choose id, H[%d][%d] is: %d \n", i, j, M->H_matrix[i][j]);
+//      printf("in choose id, H[%d][%d] is: %d \n", i, j, M->H_matrix[i][j]);
       sum[i] += M->H_matrix[i][j];
     }
   }
@@ -88,20 +88,19 @@ void play(void) {
         }
         if (isTimeOut(joinTime, JOIN_TIMEOUT)) {
           M->joinStateIs(INITING);
-          printf("in waiting state, timed out!!!\n");
         }
         break;
-      /*=================INITING======================*/
+        /*=================INITING======================*/
       case INITING:
         printf("in initing state\n");
         choose_id();
-        M->setRatAsMe(MY_ID);
-        sendHeartBeat();
+        M->setMeInArray(MY_ID);  //set me as playing
         M->joinStateIs(PLAYING);
+        sendHeartBeat();
         printf("init done, my id is %d\n", MY_ID);
         break;
 
-      /*=================PLAYING======================*/
+        /*=================PLAYING======================*/
       case PLAYING:
         repaintWindow();
         if (!M->peeking())
@@ -392,12 +391,16 @@ void shoot() {
     M->dirMissileIs(M->dir());
     M->xMissileIs(M->xloc());
     M->yMissileIs(M->yloc());
+
     timeval t;
     gettimeofday(&t, NULL);
     M->lastUpdateTimeIs(t);
 
-    M->scoreIs(M->score().value() - 1);
-    UpdateScoreCard(M->myRatId().value());
+    M->H_matrix[MY_ID][MY_ID] += 1;
+
+    M->scoreIs(M->calculateScore(MY_ID));
+
+    UpdateScoreCard(MY_ID);
 
   }
   updateView = TRUE;
@@ -461,21 +464,18 @@ void MWError(char *s) {
 
 /* This is just for the sample version, rewrite your own */
 Score GetRatScore(RatIndexType ratId) {
-  if (ratId.value() == M->myRatId().value()) {
-    return (M->score());
-  } else {
-    return (0);
-  }
+  short id = ratId.value();
+  return M->calculateScore(id);
 }
 
 /* ----------------------------------------------------------------------- */
 
 /* This is just for the sample version, rewrite your own */
-char *GetRatName(RatIndexType ratId) {
+const char *GetRatName(RatIndexType ratId) {
   if (ratId.value() == M->myRatId().value()) {
     return (M->myName_);
   } else {
-    return ("Dummy");
+    return M->mazeRats_[ratId.value()].name.c_str();
   }
 }
 
@@ -618,8 +618,7 @@ void sendHeartBeat() {
 //  HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
 //                 int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
 //                 int16_t misX_, int16_t misY_, int16_t *hitCount_);
-  HeartBeatPkt *heartBeatPkt = new HeartBeatPkt((uint8_t) M->myRatId().value(),
-                                                (uint16_t) 0,
+  HeartBeatPkt *heartBeatPkt = new HeartBeatPkt((uint8_t) MY_ID, (uint16_t) 0,
                                                 (uint32_t) M->seqNum(),
                                                 MY_X_LOC,
                                                 MY_Y_LOC,
@@ -629,18 +628,10 @@ void sendHeartBeat() {
                                                 MY_Y_MIS,
                                                 (int16_t *) M->H_matrix[MY_ID]);
 
-//  heartBeatPkt->printPacket();
-
+  heartBeatPkt->printPacket(true);
   MW244BPacket *pack = new MW244BPacket();
   memcpy(pack, heartBeatPkt, sizeof(HeartBeatPkt));
   char *aslong = (char *) pack;
-  printf(">>>>>>>===== sending a heart beat packet\n");
-  for (int i = 0; i < 35; i++) {
-    printf("%02x ", aslong[i]);
-    if (i % 4 == 3)
-      printf("\n");
-  }
-  printf("\n");
   sendPacket(pack);
   delete heartBeatPkt;
   delete pack;
@@ -650,8 +641,15 @@ void sendHeartBeat() {
 
 }
 
-void sendNameRequest() {
-  NameRequestPkt *nameRequestPkt = new NameRequestPkt();
+void sendNameRequest(uint8_t targetUserId) {
+//  NameRequestPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
+//                   uint8_t targetUserId_, char *name_);
+  NameRequestPkt *nameRequestPkt = new NameRequestPkt((uint8_t) MY_ID,
+                                                      (uint16_t) 0,
+                                                      (uint32_t) M->seqNum(),
+                                                      (uint8_t) targetUserId,
+                                                      M->name().c_str());
+  nameRequestPkt->printPacket(1);
   MW244BPacket *pack = new MW244BPacket();
   memcpy(pack, nameRequestPkt, sizeof(NameRequestPkt));
   sendPacket(pack);
@@ -659,18 +657,21 @@ void sendNameRequest() {
   delete pack;
 }
 void sendNameReply() {
-  NameReplyPkt *nameReplyPkt = new NameReplyPkt();
+  NameReplyPkt *nameReplyPkt = new NameReplyPkt((uint8_t) MY_ID, (uint16_t) 0,
+                                                (uint32_t) M->seqNum(),
+                                                M->name().c_str());
+  nameReplyPkt->printPacket(1);
   MW244BPacket *pack = new MW244BPacket();
   memcpy(pack, nameReplyPkt, sizeof(NameReplyPkt));
   sendPacket(pack);
   delete nameReplyPkt;
   delete pack;
-//  strcpy(packX->name, char *nameReplyPkt->name);
 
 }
 
 void sendGameExit() {
   GameExitPkt *gameExitPkt = new GameExitPkt();
+  gameExitPkt->printPacket(1);
   MW244BPacket *pack = new MW244BPacket();
   memcpy(pack, gameExitPkt, sizeof(GameExitPkt));
   sendPacket(pack);
@@ -683,8 +684,16 @@ void sendGameExit() {
 /* Sample of processPacket. */
 
 void processPacket(MWEvent *eventPacket) {
-  printf("!! !! !! received a packet!\n");
   MW244BPacket *pack = eventPacket->eventDetail;
+  PacketBase *packBase = (PacketBase*) pack;
+  if (packBase->userId == MY_ID) {
+    printf("\nreceived the packet from myself, discard\n");
+    return;
+  }
+  if (packBase->seqNum < M->mazeRats_[packBase->userId].seqNum) {
+    printf("received out of order packet, discard\n");
+    return;
+  }
   switch (pack->type) {
     case HEART_BEAT:
       processHeartBeat((HeartBeatPkt *) pack);
@@ -704,27 +713,43 @@ void processPacket(MWEvent *eventPacket) {
 }
 
 void processHeartBeat(HeartBeatPkt *packet) {
-  int rat_id = packet->userId;
+  int id = packet->userId;
   int i;
-  packet->printPacket();
+  packet->printPacket(0);
   printf("my state = %d \n", M->joinState());
 
-  if (M->mazeRats_[rat_id].playing == false)
+  if (M->H_matrix[id][id] == -1)
     ;
-  if (M->H_matrix[rat_id][rat_id] == -1)
-    ;
+  //received heart beat from a new player:
+  if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "" ) && M->joinState() == PLAYING) {
+    short sum = 0;
+    for (i = 0; i < 8; i++)
+      sum += M->H_matrix[id][i];
+//    assert(sum == -8);
+    sum = 0;
+    for (i = 0; i < 8; i++)
+      sum += M->H_matrix[i][id];
+//    assert(sum == -8);
+    sendNameRequest((uint8_t) id);
+
+  }
+
+//update name for new player
+  if (M->joinState() == WAITING){
+    M->mazeRats_[id].playing = true;
+  }
 
 //update a row of H_matrix and H_base
   for (i = 0; i < MAX_RATS; i++) {
-    M->H_matrix[rat_id][i] = ntohs(packet->hitCount[i]);
+    M->H_matrix[id][i] = ntohs(packet->hitCount[i]);
   }
-  M->H_base[rat_id] = ntohs(packet->scoreBase);
+  M->H_base[id] = ntohs(packet->scoreBase);
 //update positions
-  M->mazeRats_[rat_id].x = Loc(ntohs(packet->ratX));
-  M->mazeRats_[rat_id].y = Loc(ntohs(packet->ratY));
-  M->mazeRats_[rat_id].dir = Direction(ntohs(packet->ratD));
-  M->mazeRats_[rat_id].xMis = Loc(ntohs(packet->misX));
-  M->mazeRats_[rat_id].yMis = Loc(ntohs(packet->misY));
+  M->mazeRats_[id].x = Loc(ntohs(packet->ratX));
+  M->mazeRats_[id].y = Loc(ntohs(packet->ratY));
+  M->mazeRats_[id].dir = Direction(ntohs(packet->ratD));
+  M->mazeRats_[id].xMis = Loc(ntohs(packet->misX));
+  M->mazeRats_[id].yMis = Loc(ntohs(packet->misY));
 //update score
   for (i = 0; i < MAX_RATS; i++) {
     M->calculateScore(i);
@@ -732,12 +757,28 @@ void processHeartBeat(HeartBeatPkt *packet) {
 
 }
 void processNameRequest(NameRequestPkt *packet) {
+  if (packet->targetUserId != MY_ID)
+    return;
+  int id = packet->userId;
+  int i;
+  packet->printPacket(0);
+  M->mazeRats_[id].name=M->name();
+  sendNameReply();
 
 }
 void processNameReply(NameReplyPkt *packet) {
+  int id = packet->userId;
+  int i;
+  packet->printPacket(0);
+  M->mazeRats_[id].name = packet->name;
+  M->mazeRats_[id].playing = true;
+  printf("received name reply with name:%s\n", M->mazeRats_[id].name.c_str());
 
 }
 void processGameExit(GameExitPkt *packet) {
+  int id = packet->userId;
+  int i;
+  packet->printPacket(0);
 
 }
 

@@ -388,7 +388,7 @@ class MazewarInstance : public Fwk::NamedInterface {
   void seqNumIs(uint32_t seqNum) {
     this->seqNum_ = seqNum;
   }
-  int calculateScore(int ratId) {
+  Score calculateScore(int ratId) {
     int score = H_base[ratId];
     for (int i = 0; i < MAX_RATS && i != ratId; i++) {
       score += H_matrix[ratId][i] > 0 ? WIN_SCORE * H_matrix[ratId][i] : 0;
@@ -396,9 +396,9 @@ class MazewarInstance : public Fwk::NamedInterface {
     }
     score -= H_matrix[ratId][ratId];
     mazeRats_[ratId].score = score;
-    return score;
+    return Score(score);
   }
-  void setRatAsMe(int ratId) {
+  void setMeInArray(int ratId) {
     mazeRats_[ratId].playing = true;
     mazeRats_[ratId].x = xloc_;
     mazeRats_[ratId].y = yloc_;
@@ -419,7 +419,7 @@ class MazewarInstance : public Fwk::NamedInterface {
       : Fwk::NamedInterface(s),
         dir_(0),
         dirPeek_(0),
-        myRatId_(0),
+        myRatId_(0xFF),
         score_(0),
         xloc_(1),
         yloc_(3),
@@ -430,7 +430,7 @@ class MazewarInstance : public Fwk::NamedInterface {
         yMissile_(0),
         dirMissile_(0),
         joinState_(WAITING),
-        seqNum_(0x8888) {
+        seqNum_(0x8800) {
     myAddr_ = (Sockaddr*) malloc(sizeof(Sockaddr));
     if (!myAddr_) {
       printf("Error allocating sockaddr variable");
@@ -571,7 +571,7 @@ void quit(int);
 void NewPosition(MazewarInstance::Ptr M);
 void MWError(char *);
 Score GetRatScore(RatIndexType);
-char *GetRatName(RatIndexType);
+const char *GetRatName(RatIndexType);
 void ConvertIncoming(MW244BPacket *);
 void ConvertOutgoing(MW244BPacket *);
 void ratState(void);
@@ -588,7 +588,7 @@ void netInit(void);
 bool isTimeOut(timeval, long);
 void sendPacket(PacketBase *);
 void sendHeartBeat();
-void sendNameRequest();
+void sendNameRequest(uint8_t);
 void sendNameReply();
 void sendGameExit();
 
