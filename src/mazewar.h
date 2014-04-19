@@ -61,7 +61,7 @@
 /* You can modify this if you want to */
 #define	MAX_RATS	 8
 #define MISSILE_SPEED 200
-#define JOIN_TIMEOUT 5000
+#define JOIN_TIMEOUT 2000
 #define EXIT_TIMEOUT 5000
 #define HEART_BEAT_RATE 2000
 
@@ -389,19 +389,16 @@ class MazewarInstance : public Fwk::NamedInterface {
     this->seqNum_ = seqNum;
   }
   int calculateScore(int ratId) {
-    int score__ = H_base[ratId];
+    int score = H_base[ratId];
     for (int i = 0; i < MAX_RATS && i != ratId; i++) {
-      score__ += H_matrix[ratId][i] > 0 ? WIN_SCORE * H_matrix[ratId][i] : 0;
-      score__ -= H_matrix[i][ratId] > 0 ?
-      LOSE_SCORE * H_matrix[ratId][i] :
-                                          0;
+      score += H_matrix[ratId][i] > 0 ? WIN_SCORE * H_matrix[ratId][i] : 0;
+      score -= H_matrix[i][ratId] > 0 ? LOSE_SCORE * H_matrix[ratId][i] : 0;
     }
-    score__ -= H_matrix[ratId][ratId];
-    mazeRats_[ratId].score = score__;
-    return score__;
+    score -= H_matrix[ratId][ratId];
+    mazeRats_[ratId].score = score;
+    return score;
   }
   void setRatAsMe(int ratId) {
-
     mazeRats_[ratId].playing = true;
     mazeRats_[ratId].x = xloc_;
     mazeRats_[ratId].y = yloc_;
@@ -413,8 +410,6 @@ class MazewarInstance : public Fwk::NamedInterface {
     mazeRats_[ratId].score = score_.value();
     mazeRats_[ratId].hasMissile = hasMissile_;
     mazeRats_[ratId].name = name();
-
-
     mazeRats_[ratId].seqNum = seqNum_;
 
   }
@@ -444,6 +439,7 @@ class MazewarInstance : public Fwk::NamedInterface {
     for (i = 0; i < MAX_RATS; i++) {
       printf("initializing M!!!!!=================\n");
       H_base[i] = 0;
+      H_occupied[i] = false;
       for (j = 0; j < MAX_RATS; j++) {
         H_matrix[i][j] = -1;
       }
@@ -479,12 +475,13 @@ class MazewarInstance : public Fwk::NamedInterface {
   RatName myName_;
   int16_t H_matrix[MAX_RATS][MAX_RATS];
   int16_t H_base[MAX_RATS];
+  bool H_occupied[MAX_RATS];
   Rat mazeRats_[MAX_RATS];
 
 };
 extern MazewarInstance::Ptr M;
 
-#define MY_RAT_INDEX		0
+#define MY_RAT_INDEX		M->myRatId().value()
 #define MY_DIR			M->dir().value()
 #define MY_DIR_MIS M->dirMissile().value()
 #define MY_X_LOC		M->xloc().value()
@@ -613,5 +610,6 @@ void InvertScoreLine(RatIndexType);
 void NotifyPlayer(void);
 void DrawString(const char*, uint32_t, uint32_t, uint32_t);
 void StopWindow(void);
+void repaintWindow();
 
 #endif

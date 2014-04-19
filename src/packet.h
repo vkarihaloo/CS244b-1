@@ -58,11 +58,23 @@ class HeartBeatPkt : public PacketBase {
     }
   }
   void printPacket() {
-    printf(" type=%d from %d, seqNum=%d\n", type, userId,
-           seqNum);
-    printf("H_matrix is");
-    for (int i=0; i<8; i++)
-      printf("%d", hitCount[i]);
+//    printf(" type=%d from %d, seqNum=%d\n", type, userId,
+//           seqNum);
+//    printf("H_matrix is");
+//    for (int i=0; i<8; i++)
+//      printf("%d", hitCount[i]);
+//
+    int i;
+      /* print packet */
+      printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
+             (userId), ntohl(seqNum));
+      char *aslong = (char *)this;
+      for (int i = 0; i < 35; i++) {
+        printf("%02x ", aslong[i]);
+        if (i % 4 == 3)
+          printf("\n");
+      }
+      printf("\n");
   }
 
 }__attribute__ ((packed));

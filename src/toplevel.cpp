@@ -50,7 +50,25 @@ int main(int argc, char *argv[]) {
 }
 
 /* ----------------------------------------------------------------------- */
-
+void choose_id() {
+  int i, j;
+  short sum[MAX_RATS];
+  for (i = 0; i < MAX_RATS; i++) {
+    sum[i] = 0;
+    for (j = 0; j < MAX_RATS; j++) {
+     printf("in choose id, H[%d][%d] is: %d \n", i, j, M->H_matrix[i][j]);
+      sum[i] += M->H_matrix[i][j];
+    }
+  }
+  for (i = 0; i < MAX_RATS; i++) {
+    if (sum[i] == -MAX_RATS) {
+      M->myRatIdIs(RatId(i));
+      M->H_matrix[i][MY_ID] = 0;
+      M->H_matrix[MY_ID][i] = 0;
+      break;
+    }
+  }
+}
 void play(void) {
   MWEvent event;
   MW244BPacket incoming;
@@ -62,102 +80,96 @@ void play(void) {
   while (TRUE) {
     NextEvent(&event, M->theSocket());
     switch (M->joinState()) {
+      /*=================WAITING======================*/
       case WAITING:
         printf("in waiting state, waiting for 3 seconds\n");
         if (event.eventType == EVENT_NETWORK) {
           processPacket(&event);
-          isFirstPlayer = false;
         }
         if (isTimeOut(joinTime, JOIN_TIMEOUT)) {
           M->joinStateIs(INITING);
           printf("in waiting state, timed out!!!\n");
         }
         break;
-
+      /*=================INITING======================*/
       case INITING:
         printf("in initing state\n");
+        choose_id();
+        M->setRatAsMe(MY_ID);
+        sendHeartBeat();
         M->joinStateIs(PLAYING);
-        if (isFirstPlayer) {
-          M->myRatIdIs(0);
-        for(int i=0; i<MAX_RATS; i++){
-          M->H_matrix[0][i] = 0;
-          M->H_matrix[i][0] = 0;
-        }
-        M->H_base[0] = 0;
-        M->setRatAsMe(0);
+        printf("init done, my id is %d\n", MY_ID);
+        break;
 
-      } else {
+      /*=================PLAYING======================*/
+      case PLAYING:
+        repaintWindow();
+        if (!M->peeking())
+          switch (event.eventType) {
+            case EVENT_A:
+              aboutFace();
+              sendHeartBeat();
+              break;
 
-      }
-      break;
+            case EVENT_S:
+              leftTurn();
+              sendHeartBeat();
+              break;
 
-    case PLAYING:
-      if (!M->peeking())
-        switch (event.eventType) {
-          case EVENT_A:
-            aboutFace();
-            sendHeartBeat();
-            break;
+            case EVENT_D:
+              forward();
+              sendHeartBeat();
+              break;
 
-          case EVENT_S:
-            leftTurn();
-            sendHeartBeat();
-            break;
+            case EVENT_F:
+              rightTurn();
+              sendHeartBeat();
+              break;
 
-          case EVENT_D:
-            forward();
-            sendHeartBeat();
-            break;
+            case EVENT_BAR:
+              backward();
+              sendHeartBeat();
+              break;
 
-          case EVENT_F:
-            rightTurn();
-            sendHeartBeat();
-            break;
+            case EVENT_LEFT_D:
+              peekLeft();
+              break;
 
-          case EVENT_BAR:
-            backward();
-            sendHeartBeat();
-            break;
+            case EVENT_MIDDLE_D:
+              shoot();
+              sendHeartBeat();
+              break;
 
-          case EVENT_LEFT_D:
-            peekLeft();
-            break;
+            case EVENT_RIGHT_D:
+              peekRight();
+              break;
 
-          case EVENT_MIDDLE_D:
-            shoot();
-            sendHeartBeat();
-            break;
+            case EVENT_NETWORK:
+              processPacket(&event);
+              break;
 
-          case EVENT_RIGHT_D:
-            peekRight();
-            break;
+            case EVENT_INT:
+              quit(0);
+              break;
+            default:
+              break;
+          }
+        else
+          switch (event.eventType) {
+            case EVENT_RIGHT_U:
+            case EVENT_LEFT_U:
+              peekStop();
+              break;
 
-          case EVENT_NETWORK:
-            processPacket(&event);
-            break;
-
-          case EVENT_INT:
-            quit(0);
-            break;
-          default:
-            break;
-        }
-      else
-        switch (event.eventType) {
-          case EVENT_RIGHT_U:
-          case EVENT_LEFT_U:
-            peekStop();
-            break;
-
-          case EVENT_NETWORK:
-            processPacket(&event);
-            break;
-          default:
-            break;
-        }
-      break;
-    default:
-      break;
+            case EVENT_NETWORK:
+              processPacket(&event);
+              break;
+            default:
+              break;
+          }
+        break;
+      default:
+        break;
     }
 
     ratStates(); /* clean house */
@@ -599,7 +611,7 @@ void sendPacket(MW244BPacket *packet) {
              (struct sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
   }
-  M->seqNumIs(M->seqNum()+1);
+  M->seqNumIs(M->seqNum() + 1);
 }
 
 void sendHeartBeat() {
@@ -636,7 +648,6 @@ void sendHeartBeat() {
   gettimeofday(&cur, NULL);
   M->lastHeartBeatTimeIs(cur);
 
-
 }
 
 void sendNameRequest() {
@@ -654,7 +665,7 @@ void sendNameReply() {
   sendPacket(pack);
   delete nameReplyPkt;
   delete pack;
-  //  strcpy(packX->name, char *nameReplyPkt->name);
+//  strcpy(packX->name, char *nameReplyPkt->name);
 
 }
 
@@ -676,16 +687,16 @@ void processPacket(MWEvent *eventPacket) {
   MW244BPacket *pack = eventPacket->eventDetail;
   switch (pack->type) {
     case HEART_BEAT:
-      processHeartBeat((HeartBeatPkt *)pack);
+      processHeartBeat((HeartBeatPkt *) pack);
       break;
     case NAME_REQUEST:
-      processNameRequest((NameRequestPkt *)pack);
+      processNameRequest((NameRequestPkt *) pack);
       break;
     case NAME_REPLY:
-      processNameReply((NameReplyPkt *)pack);
+      processNameReply((NameReplyPkt *) pack);
       break;
     case GAME_EXIT:
-      processGameExit((GameExitPkt *)pack);
+      processGameExit((GameExitPkt *) pack);
       break;
     default:
       break;
@@ -695,29 +706,26 @@ void processPacket(MWEvent *eventPacket) {
 void processHeartBeat(HeartBeatPkt *packet) {
   int rat_id = packet->userId;
   int i;
-  printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
-         (packet->userId), ntohl(packet->seqNum));
-  char *aslong = (char *) packet;
-  for (int i = 0; i < 35; i++) {
-    printf("%02x ", aslong[i]);
-    if (i % 4 == 3)
-      printf("\n");
-  }
-  printf("\n");
+  packet->printPacket();
   printf("my state = %d \n", M->joinState());
 
-  //update a row of H_matrix and H_base
+  if (M->mazeRats_[rat_id].playing == false)
+    ;
+  if (M->H_matrix[rat_id][rat_id] == -1)
+    ;
+
+//update a row of H_matrix and H_base
   for (i = 0; i < MAX_RATS; i++) {
     M->H_matrix[rat_id][i] = ntohs(packet->hitCount[i]);
   }
   M->H_base[rat_id] = ntohs(packet->scoreBase);
-  //update positions
+//update positions
   M->mazeRats_[rat_id].x = Loc(ntohs(packet->ratX));
   M->mazeRats_[rat_id].y = Loc(ntohs(packet->ratY));
   M->mazeRats_[rat_id].dir = Direction(ntohs(packet->ratD));
   M->mazeRats_[rat_id].xMis = Loc(ntohs(packet->misX));
   M->mazeRats_[rat_id].yMis = Loc(ntohs(packet->misY));
-  //update score
+//update score
   for (i = 0; i < MAX_RATS; i++) {
     M->calculateScore(i);
   }
@@ -808,11 +816,10 @@ void netInit() {
   printf("\n");
 
   /* set up some stuff strictly for this local sample */
-  //TODO:
+//TODO:
 //  M->myRatIdIs(0);
 //  M->scoreIs(0);
 //  SetMyRatIndexType(0);
-
   /* Get the multi-cast address ready to use in SendData()
    calls. */
   memcpy(&groupAddr, &nullAddr, sizeof(Sockaddr));
