@@ -24,17 +24,15 @@ class PacketBase {
   uint32_t seqNum;
   PacketBase() {
   }
-  virtual ~PacketBase() {
-  }
   PacketBase(uint8_t type_, uint8_t userId_, uint16_t checkSum_,
              uint32_t seqNum_)
       : type(type_),
         userId(userId_),
-        checkSum(htons(checkSum_)),
-        seqNum(htonl(seqNum_)) {
+        checkSum((checkSum_)),
+        seqNum((seqNum_)) {
   }
   void printPacket(bool isSend);
-  virtual void processPacket()=0;
+//  virtual void processPacket()=0;
 }__attribute__ ((packed));
 
 class HeartBeatPkt : public PacketBase {
@@ -47,8 +45,6 @@ class HeartBeatPkt : public PacketBase {
   int16_t misY;
   int16_t hitCount[MAX_RATS];
   HeartBeatPkt() {
-  }
-  ~HeartBeatPkt() {
   }
   HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
@@ -65,7 +61,7 @@ class HeartBeatPkt : public PacketBase {
       hitCount[i] = htons(hitCount_[i]);
     }
   }
-  void processPacket();
+  void printPacket(bool isSend);
 }__attribute__ ((packed));
 
 class NameRequestPkt : public PacketBase {
@@ -73,8 +69,6 @@ class NameRequestPkt : public PacketBase {
   uint8_t targetUserId;
   char name[MAX_NAME];
   NameRequestPkt() {
-  }
-  ~NameRequestPkt() {
   }
   NameRequestPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                  uint8_t targetUserId_, const char *name_)
@@ -86,15 +80,12 @@ class NameRequestPkt : public PacketBase {
     }
     name[i] = '\0';
   }
-  void processPacket();
 }__attribute__ ((packed));
 
 class NameReplyPkt : public PacketBase {
  public:
   char name[MAX_NAME];
   NameReplyPkt() {
-  }
-  ~NameReplyPkt() {
   }
   NameReplyPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                const char *name_)
@@ -105,20 +96,16 @@ class NameReplyPkt : public PacketBase {
     }
     name[i] = '\0';
   }
-  void processPacket();
 }__attribute__ ((packed));
 
 class GameExitPkt : public PacketBase {
  public:
   GameExitPkt() {
   }
-  ~GameExitPkt() {
-  }
   GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_)
       : PacketBase(GAME_EXIT, userId_, htons(checkSum_), htonl(seqNum_)) {
 
   }
-  void processPacket();
 }__attribute__ ((packed));
 
 #endif

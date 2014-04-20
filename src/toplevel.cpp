@@ -48,7 +48,16 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-
+void printMatrix() {
+  printf("the H_matrix for player %d is:\n", MY_ID);
+  for (int i = 0; i < 8; i++) {
+    printf("  ");
+    for (int j = 0; j < 8; j++) {
+      printf("%3d", M->H_matrix[i][j]);
+    }
+    printf("\n");
+  }
+}
 /* ----------------------------------------------------------------------- */
 void choose_id() {
   int i, j;
@@ -57,21 +66,24 @@ void choose_id() {
   for (i = 0; i < MAX_RATS; i++) {
     sum[i] = 0;
     for (j = 0; j < MAX_RATS; j++) {
-//      printf("in choose id, H[%d][%d] is: %d \n", i, j, M->H_matrix[i][j]);
       sum[i] += M->H_matrix[i][j];
     }
-  }
-  for (i = 0; i < MAX_RATS; i++) {
-    if (sum[i] == -MAX_RATS) {
+    if (success == false && sum[i] == -MAX_RATS) {
       M->myRatIdIs(RatId(i));
       success = true;
-      M->H_matrix[i][MY_ID] = 0;
-      M->H_matrix[MY_ID][i] = 0;
-      break;
+      M->H_matrix[MY_ID][MY_ID] = 0;
     }
   }
+  for (i = 0; i != MY_ID && i < MAX_RATS; i++) {
+    if (sum[i] != -MAX_RATS) {
+      M->H_matrix[MY_ID][i] = 0;
+    }
+  }
+  printf("choose id done! id = %d ", MY_ID);
+  printMatrix();
   assert(success == true);
 }
+
 void play(void) {
   MWEvent event;
   MW244BPacket incoming;
@@ -96,6 +108,7 @@ void play(void) {
         /*=================INITING======================*/
       case INITING:
         printf("in initing state\n");
+        printMatrix();
         choose_id();
         M->setMeInArray(MY_ID);  //set me as playing
         M->joinStateIs(PLAYING);
@@ -427,15 +440,18 @@ void NewPosition(MazewarInstance::Ptr m) {
   Loc newX(0);
   Loc newY(0);
   Direction dir(0); /* start on occupied square */
-
-  while (M->maze_[newX.value()][newY.value()]) {
+  bool conflict = true;
+  while (M->maze_[newX.value()][newY.value()] || conflict) {
     /* MAZE[XY]MAX is a power of 2 */
     newX = Loc(random() & (MAZEXMAX - 1));
     newY = Loc(random() & (MAZEYMAX - 1));
-
-//TODO
-    /* In real game, also check that square is
-     unoccupied by another rat */
+    // check that square is unoccupied by another rat
+    conflict = false;
+    for (int i = 0; i < MAX_RATS; i++) {
+      if (m->mazeRats_[i].x.value() == newX.value()
+          && m->mazeRats_[i].y.value() == newY.value())
+        conflict = true;
+    }
   }
 
   /* prevent a blank wall at first glimpse */
@@ -475,14 +491,8 @@ Score GetRatScore(RatIndexType ratId) {
 
 /* This is just for the sample version, rewrite your own */
 const char *GetRatName(RatIndexType ratId) {
-  if (ratId.value() == M->myRatId().value()) {
-    return (M->myName_);
-  } else {
-    return M->mazeRats_[ratId.value()].name.c_str();
-  }
+  return M->mazeRats_[ratId.value()].name.c_str();
 }
-
-/* ----------------------------------------------------------------------- */
 
 /* This is just for the sample version, rewrite your own if necessary */
 void ConvertIncoming(MW244BPacket *p) {
@@ -493,7 +503,6 @@ void ConvertIncoming(MW244BPacket *p) {
 /* This is just for the sample version, rewrite your own if necessary */
 void ConvertOutgoing(MW244BPacket *p) {
 }
-
 /* ----------------------------------------------------------------------- */
 
 /* This is just for the sample version, rewrite your own */
@@ -541,7 +550,7 @@ void manageMissiles() {
 //    printf("oldX=%d, oldY=%d\n", oldX, oldY);
 //    printf("newX=%d, newY=%d\n", newX, newY);
     if (!M->maze_[newX][newY]) {
-//      printf("draw new missile\n");
+      printf("draw new missile\n");
       M->xMissileIs(Loc(newX));
       M->yMissileIs(Loc(newY));
       showMissile(Loc(newX), Loc(newY), MY_DIR_MIS, Loc(oldX), Loc(oldY), true);
@@ -549,8 +558,8 @@ void manageMissiles() {
       //already hit the wall:
 //      printf("hit the wall\n");
       M->hasMissileIs(FALSE);
-      M->xMissileIs(Loc(-1));
-      M->yMissileIs(Loc(-1));
+      M->xMissileIs(Loc(0));
+      M->yMissileIs(Loc(0));
       clearSquare(Loc(oldX), Loc(oldY));
     }
     updateView = TRUE;
@@ -620,9 +629,6 @@ void sendPacket(MW244BPacket *packet) {
 }
 
 void sendHeartBeat() {
-//  HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
-//                 int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
-//                 int16_t misX_, int16_t misY_, int16_t *hitCount_);
   HeartBeatPkt *heartBeatPkt = new HeartBeatPkt((uint8_t) MY_ID, (uint16_t) 0,
                                                 (uint32_t) M->seqNum(),
                                                 MY_X_LOC,
@@ -692,9 +698,10 @@ void processPacket(MWEvent *eventPacket) {
   MW244BPacket *pack = eventPacket->eventDetail;
   PacketBase *packBase = (PacketBase*) pack;
   if (packBase->userId == MY_ID) {
-    printf("\nreceived the packet from myself, discard\n");
+//    printf("\nreceived the packet from myself, discard\n");
     return;
   }
+  printMatrix();
   if (packBase->seqNum < M->mazeRats_[packBase->userId].seqNum) {
     printf("received out of order packet, discard\n");
     return;
@@ -720,13 +727,11 @@ void processPacket(MWEvent *eventPacket) {
 void processHeartBeat(HeartBeatPkt *packet) {
   uint8_t id = packet->userId;
   int i;
-  bool hit = false;
   packet->printPacket(0);
   printf("my state = %d \n", M->joinState());
 
-  if (M->H_matrix[id][id] == -1)
-    ;
-  //received heart beat from a new player:
+//  if (M->H_matrix[id][id] == -1)
+//received heart beat from a new player:
   if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "")
       && M->joinState() == PLAYING) {
     short sum = 0;
@@ -737,6 +742,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
     for (i = 0; i < 8; i++)
       sum += M->H_matrix[i][id];
 //    assert(sum == -8);
+    M->H_matrix[MY_ID][id] = 0;
     sendNameRequest((uint8_t) id);
   }
 
@@ -752,33 +758,35 @@ void processHeartBeat(HeartBeatPkt *packet) {
   M->mazeRats_[id].xMis = Loc(ntohs(packet->misX));
   M->mazeRats_[id].yMis = Loc(ntohs(packet->misY));
 
-  //update name for new player: when I'm waiting, I set the received rat to be playing in my rat array
+//update name for new player: when I'm waiting, I set the received rat to be playing in my rat array
   if (M->joinState() == WAITING) {
     M->mazeRats_[id].playing = true;
     return;
   }
-  //I'm hit by rat[id]
+//I'm hit by rat[id]
   if (MY_X_LOC == ntohs(packet->misX) && MY_Y_LOC == ntohs(packet->misY)) {
-    printf("hit by %d", id);
+    printf("!!! attention! hit by %d, ", id);
+//    NewPosition(M);
     M->H_matrix[id][MY_ID]++;
-    hit = true;
+    printMatrix();
+    sendHeartBeat();
   }
-  //I hit rat[id]
+//I hit rat[id]
   if (MY_X_MIS == ntohs(packet->ratX) && MY_Y_MIS == ntohs(packet->ratY)) {
-    printf("hit %d", id);
+    printf("attention! hit %d", id);
     M->H_matrix[MY_ID][id]++;
     M->hasMissileIs(FALSE);
-    M->xMissileIs(Loc(-1));
-    M->yMissileIs(Loc(-1));
-    hit = true;
-  }
-  if (hit)
+    M->xMissileIs(Loc(0));
+    M->yMissileIs(Loc(0));
+    printMatrix();
     sendHeartBeat();
-
+  }
 //update score
   for (i = 0; i < MAX_RATS; i++) {
-    M->calculateScore(i);
+    UpdateScoreCard(RatIndexType(i));
   }
+  M->scoreIs(Score(M->mazeRats_[MY_ID].score));
+  updateView = true;
 
 }
 void processNameRequest(NameRequestPkt *packet) {
