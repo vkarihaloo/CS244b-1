@@ -24,6 +24,8 @@ class PacketBase {
   uint32_t seqNum;
   PacketBase() {
   }
+  virtual ~PacketBase() {
+  }
   PacketBase(uint8_t type_, uint8_t userId_, uint16_t checkSum_,
              uint32_t seqNum_)
       : type(type_),
@@ -32,6 +34,7 @@ class PacketBase {
         seqNum(htonl(seqNum_)) {
   }
   void printPacket(bool isSend);
+  virtual void processPacket()=0;
 }__attribute__ ((packed));
 
 class HeartBeatPkt : public PacketBase {
@@ -45,11 +48,13 @@ class HeartBeatPkt : public PacketBase {
   int16_t hitCount[MAX_RATS];
   HeartBeatPkt() {
   }
+  ~HeartBeatPkt() {
+  }
   HeartBeatPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
                int16_t misX_, int16_t misY_, int16_t *hitCount_)
 
-      : PacketBase(HEART_BEAT, userId_, checkSum_, seqNum_),
+      : PacketBase(HEART_BEAT, userId_, htons(checkSum_), htonl(seqNum_)),
         ratX(htons(ratX_)),
         ratY(htons(ratY_)),
         ratD(htons(ratD_)),
@@ -60,30 +65,7 @@ class HeartBeatPkt : public PacketBase {
       hitCount[i] = htons(hitCount_[i]);
     }
   }
-//  void printPacket(bool isSend) {
-////    printf(" type=%d from %d, seqNum=%d\n", type, userId,
-////           seqNum);
-////    printf("H_matrix is");
-////    for (int i=0; i<8; i++)
-////      printf("%d", hitCount[i]);
-////
-//    int i;
-//    if (isSend) {
-//      printf("<<<<<===== sending a heart beat packet\n");
-//    } else {
-//      printf("====>>>>>>>  received a heart beat from %d, seqNum=%x\n",
-//             (userId), ntohl(seqNum));
-//    }
-//
-//    char *aslong = (char *) this;
-//    for (int i = 0; i < 35; i++) {
-//      printf("%02x ", aslong[i]);
-//      if (i % 4 == 3)
-//        printf("\n");
-//    }
-//    printf("\n");
-//  }
-
+  void processPacket();
 }__attribute__ ((packed));
 
 class NameRequestPkt : public PacketBase {
@@ -92,9 +74,11 @@ class NameRequestPkt : public PacketBase {
   char name[MAX_NAME];
   NameRequestPkt() {
   }
+  ~NameRequestPkt() {
+  }
   NameRequestPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                  uint8_t targetUserId_, const char *name_)
-      : PacketBase(NAME_REQUEST, userId_, checkSum_, seqNum_),
+      : PacketBase(NAME_REQUEST, userId_, htons(checkSum_), htonl(seqNum_)),
         targetUserId(targetUserId_) {
     int i;
     for (i = 0; i < strlen(name_) && i < MAX_NAME - 1; i++) {
@@ -102,7 +86,7 @@ class NameRequestPkt : public PacketBase {
     }
     name[i] = '\0';
   }
-
+  void processPacket();
 }__attribute__ ((packed));
 
 class NameReplyPkt : public PacketBase {
@@ -114,13 +98,14 @@ class NameReplyPkt : public PacketBase {
   }
   NameReplyPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
                const char *name_)
-      : PacketBase(NAME_REPLY, userId_, checkSum_, seqNum_) {
+      : PacketBase(NAME_REPLY, userId_, htons(checkSum_), htonl(seqNum_)) {
     int i;
     for (i = 0; i < strlen(name_) && i < MAX_NAME - 1; i++) {
       name[i] = name_[i];
     }
     name[i] = '\0';
   }
+  void processPacket();
 }__attribute__ ((packed));
 
 class GameExitPkt : public PacketBase {
@@ -130,9 +115,10 @@ class GameExitPkt : public PacketBase {
   ~GameExitPkt() {
   }
   GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_)
-      : PacketBase(GAME_EXIT, userId_, checkSum_, seqNum_) {
+      : PacketBase(GAME_EXIT, userId_, htons(checkSum_), htonl(seqNum_)) {
 
   }
+  void processPacket();
 }__attribute__ ((packed));
 
 #endif

@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 /* ----------------------------------------------------------------------- */
 void choose_id() {
   int i, j;
+  bool success = false;
   short sum[MAX_RATS];
   for (i = 0; i < MAX_RATS; i++) {
     sum[i] = 0;
@@ -63,11 +64,13 @@ void choose_id() {
   for (i = 0; i < MAX_RATS; i++) {
     if (sum[i] == -MAX_RATS) {
       M->myRatIdIs(RatId(i));
+      success = true;
       M->H_matrix[i][MY_ID] = 0;
       M->H_matrix[MY_ID][i] = 0;
       break;
     }
   }
+  assert(success == true);
 }
 void play(void) {
   MWEvent event;
@@ -464,7 +467,7 @@ void MWError(char *s) {
 
 /* This is just for the sample version, rewrite your own */
 Score GetRatScore(RatIndexType ratId) {
-  short id = ratId.value();
+  uint8_t id = ratId.value();
   return M->calculateScore(id);
 }
 
@@ -546,6 +549,8 @@ void manageMissiles() {
       //already hit the wall:
 //      printf("hit the wall\n");
       M->hasMissileIs(FALSE);
+      M->xMissileIs(Loc(-1));
+      M->yMissileIs(Loc(-1));
       clearSquare(Loc(oldX), Loc(oldY));
     }
     updateView = TRUE;
@@ -713,15 +718,17 @@ void processPacket(MWEvent *eventPacket) {
 }
 
 void processHeartBeat(HeartBeatPkt *packet) {
-  int id = packet->userId;
+  uint8_t id = packet->userId;
   int i;
+  bool hit = false;
   packet->printPacket(0);
   printf("my state = %d \n", M->joinState());
 
   if (M->H_matrix[id][id] == -1)
     ;
   //received heart beat from a new player:
-  if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "" ) && M->joinState() == PLAYING) {
+  if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "")
+      && M->joinState() == PLAYING) {
     short sum = 0;
     for (i = 0; i < 8; i++)
       sum += M->H_matrix[id][i];
@@ -731,12 +738,6 @@ void processHeartBeat(HeartBeatPkt *packet) {
       sum += M->H_matrix[i][id];
 //    assert(sum == -8);
     sendNameRequest((uint8_t) id);
-
-  }
-
-//update name for new player
-  if (M->joinState() == WAITING){
-    M->mazeRats_[id].playing = true;
   }
 
 //update a row of H_matrix and H_base
@@ -750,6 +751,30 @@ void processHeartBeat(HeartBeatPkt *packet) {
   M->mazeRats_[id].dir = Direction(ntohs(packet->ratD));
   M->mazeRats_[id].xMis = Loc(ntohs(packet->misX));
   M->mazeRats_[id].yMis = Loc(ntohs(packet->misY));
+
+  //update name for new player: when I'm waiting, I set the received rat to be playing in my rat array
+  if (M->joinState() == WAITING) {
+    M->mazeRats_[id].playing = true;
+    return;
+  }
+  //I'm hit by rat[id]
+  if (MY_X_LOC == ntohs(packet->misX) && MY_Y_LOC == ntohs(packet->misY)) {
+    printf("hit by %d", id);
+    M->H_matrix[id][MY_ID]++;
+    hit = true;
+  }
+  //I hit rat[id]
+  if (MY_X_MIS == ntohs(packet->ratX) && MY_Y_MIS == ntohs(packet->ratY)) {
+    printf("hit %d", id);
+    M->H_matrix[MY_ID][id]++;
+    M->hasMissileIs(FALSE);
+    M->xMissileIs(Loc(-1));
+    M->yMissileIs(Loc(-1));
+    hit = true;
+  }
+  if (hit)
+    sendHeartBeat();
+
 //update score
   for (i = 0; i < MAX_RATS; i++) {
     M->calculateScore(i);
@@ -759,16 +784,14 @@ void processHeartBeat(HeartBeatPkt *packet) {
 void processNameRequest(NameRequestPkt *packet) {
   if (packet->targetUserId != MY_ID)
     return;
-  int id = packet->userId;
-  int i;
+  uint8_t id = packet->userId;
   packet->printPacket(0);
-  M->mazeRats_[id].name=M->name();
+  M->mazeRats_[id].name = packet->name;
   sendNameReply();
 
 }
 void processNameReply(NameReplyPkt *packet) {
-  int id = packet->userId;
-  int i;
+  uint8_t id = packet->userId;
   packet->printPacket(0);
   M->mazeRats_[id].name = packet->name;
   M->mazeRats_[id].playing = true;
@@ -776,10 +799,8 @@ void processNameReply(NameReplyPkt *packet) {
 
 }
 void processGameExit(GameExitPkt *packet) {
-  int id = packet->userId;
-  int i;
+  uint8_t id = packet->userId;
   packet->printPacket(0);
-
 }
 
 /* ----------------------------------------------------------------------- */

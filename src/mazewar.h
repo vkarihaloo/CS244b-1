@@ -60,7 +60,7 @@
 
 /* You can modify this if you want to */
 #define	MAX_RATS	 8
-#define MISSILE_SPEED 200
+#define MISSILE_SPEED 300
 #define JOIN_TIMEOUT 2000
 #define EXIT_TIMEOUT 5000
 #define HEART_BEAT_RATE 2000
@@ -419,7 +419,7 @@ class MazewarInstance : public Fwk::NamedInterface {
       : Fwk::NamedInterface(s),
         dir_(0),
         dirPeek_(0),
-        myRatId_(0xFF),
+        myRatId_(0xFE),
         score_(0),
         xloc_(1),
         yloc_(3),
@@ -430,7 +430,7 @@ class MazewarInstance : public Fwk::NamedInterface {
         yMissile_(0),
         dirMissile_(0),
         joinState_(WAITING),
-        seqNum_(0x8800) {
+        seqNum_(0) {
     myAddr_ = (Sockaddr*) malloc(sizeof(Sockaddr));
     if (!myAddr_) {
       printf("Error allocating sockaddr variable");
