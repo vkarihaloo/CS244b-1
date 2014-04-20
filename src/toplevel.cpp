@@ -252,7 +252,13 @@ void forward(void) {
     default:
       MWError("bad direction in Forward");
   }
-  if ((MY_X_LOC != tx) || (MY_Y_LOC != ty)) {
+
+  bool conflict = false;
+  for (int i = 0; i < MAX_RATS; i++) {
+    if (M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+      conflict = true;
+  }
+  if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
     M->xlocIs(Loc(tx));
     M->ylocIs(Loc(ty));
     updateView = TRUE;
@@ -285,7 +291,12 @@ void backward() {
     default:
       MWError("bad direction in Backward");
   }
-  if ((MY_X_LOC != tx) || (MY_Y_LOC != ty)) {
+  bool conflict = false;
+  for (int i = 0; i < MAX_RATS; i++) {
+    if (M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+      conflict = true;
+  }
+  if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
     M->xlocIs(Loc(tx));
     M->ylocIs(Loc(ty));
     updateView = TRUE;
@@ -765,11 +776,11 @@ void processHeartBeat(HeartBeatPkt *packet) {
   }
 //I'm hit by rat[id]
   if (MY_X_LOC == ntohs(packet->misX) && MY_Y_LOC == ntohs(packet->misY)) {
+    sendHeartBeat();
     printf("!!! attention! hit by %d, ", id);
-//    NewPosition(M);
     M->H_matrix[id][MY_ID]++;
     printMatrix();
-    sendHeartBeat();
+    NewPosition(M);
   }
 //I hit rat[id]
   if (MY_X_MIS == ntohs(packet->ratX) && MY_Y_MIS == ntohs(packet->ratY)) {
