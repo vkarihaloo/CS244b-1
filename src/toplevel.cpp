@@ -87,6 +87,7 @@ void choose_id() {
 void play(void) {
   MWEvent event;
   MW244BPacket incoming;
+  bool needRepaint = true;
 
   event.eventDetail = &incoming;
   struct timeval joinTime;
@@ -118,7 +119,10 @@ void play(void) {
 
         /*=================PLAYING======================*/
       case PLAYING:
-        repaintWindow();
+        if (needRepaint) {
+          needRepaint = false;
+          repaintWindow();
+        }
         if (!M->peeking())
           switch (event.eventType) {
             case EVENT_A:
@@ -787,6 +791,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
     printf("attention! hit %d", id);
     M->H_matrix[MY_ID][id]++;
     M->hasMissileIs(FALSE);
+    clearSquare(M->xMissile(), M->yMissile());
     M->xMissileIs(Loc(0));
     M->yMissileIs(Loc(0));
     printMatrix();

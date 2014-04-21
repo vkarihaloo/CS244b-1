@@ -390,22 +390,22 @@ class MazewarInstance : public Fwk::NamedInterface {
   }
   Score calculateScore(int ratId) {
     int16_t score = H_base[ratId];
-    printf("updating score card: score = %d \n", score);
-    for (int i = 0; i < 8; i++) {
-      for (int j = 0; j < 8; j++) {
-        printf("%3d ", H_matrix[i][j]);
-      }
-      printf("\n");
-    }
+//    printf("updating score card: score = %d \n", score);
+//    for (int i = 0; i < 8; i++) {
+//      for (int j = 0; j < 8; j++) {
+//        printf("%3d ", H_matrix[i][j]);
+//      }
+//      printf("\n");
+//    }
     for (int i = 0; i < MAX_RATS; i++) {
       if (i == ratId)
         continue;
       score += (H_matrix[ratId][i] > 0 ? WIN_SCORE * H_matrix[ratId][i] : 0);
-      printf("H[ratid][i]=%d ", H_matrix[ratId][i]);
-      printf("i = %d, score = %d \n", i, score);
+//      printf("H[ratid][i]=%d ", H_matrix[ratId][i]);
+//      printf("i = %d, score = %d \n", i, score);
       score -= (H_matrix[i][ratId] > 0 ? LOSE_SCORE * H_matrix[i][ratId] : 0);
-      printf("H[i][ratid]=%d ", H_matrix[i][ratId]);
-      printf("i = %d, score = %d ; ", i, score);
+//      printf("H[i][ratid]=%d ", H_matrix[i][ratId]);
+//      printf("i = %d, score = %d ; ", i, score);
     }
     score -= H_matrix[ratId][ratId];
     printf("final score = %d\n", score);
@@ -555,6 +555,7 @@ void bitFlip(BitCell *, int size);
 void SwapBitmaps(void);
 void byteSwap(BitCell *, int size);
 void showMissile(Loc, Loc, Direction, Loc, Loc, bool);
+void clearSquare(Loc, Loc);
 
 /* init.c */
 void MazeInit(int, char **);
