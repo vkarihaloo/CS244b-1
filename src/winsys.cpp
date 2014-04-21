@@ -551,6 +551,10 @@ if (XPending(dpy)) {
         case '\003': /* ^C */
           event->eventType = EVENT_INT;
           return;
+
+        case 'l':
+          event->eventType = EVENT_MIDDLE_D;
+          return;
       }
       break;
 

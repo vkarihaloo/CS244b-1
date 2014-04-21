@@ -468,8 +468,6 @@ void peekStop() {
 /* ----------------------------------------------------------------------- */
 
 void shoot() {
-//TODO
-
   if (M->hasMissile()) {
     return;
   } else {
@@ -959,7 +957,7 @@ void processGameExit(uint8_t id) {
   int i;
   printf("rat %d is exit\n", id);
   for (i = 0; i < MAX_RATS; i++) {
-  //i = MY_ID;
+    //i = MY_ID;
     if (M->mazeRats_[i].playing) {
       M->H_base[i] -= (
           M->H_matrix[id][i] > 0 ? M->H_matrix[id][i] * LOSE_SCORE : 0);
