@@ -28,18 +28,54 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, quit);
   signal(SIGTERM, quit);
 
-  getName("Welcome to CS244B MazeWar!\n\nYour Name", &ratName);
-  ratName[strlen(ratName) - 1] = 0;
+  printf("argc=%d\n", argc);
+  if (argc > 1) {
+    ratName = (char*) malloc((unsigned) (strlen(argv[1]) + 1));
+    if (ratName == NULL)
+      MWError("no mem for ratName");
+    strcpy(ratName, argv[1]);
+    printf("name is : %s", ratName);
+  } else {
+    getName("Welcome to CS244B MazeWar!\n\nYour Name", &ratName);
+    ratName[strlen(ratName) - 1] = 0;
+  }
 
   M = MazewarInstance::mazewarInstanceNew(string(ratName));
   MazewarInstance* a = M.ptr();
   strncpy(M->myName_, ratName, NAMESIZE);
   free(ratName);
-
   MazeInit(argc, argv);
 
   NewPosition(M);
 
+  //set position if there's valid input:
+  if (argc > 2)
+    M->xlocIs(Loc(atoi(argv[2])));
+  if (argc > 3)
+    M->ylocIs(Loc(atoi(argv[3])));
+  if (M->maze_[MY_X_LOC][MY_Y_LOC]) {
+    printf("invalid position input, reset new position\n");
+    NewPosition(M);
+  }
+
+  //set direction if there's valid input:
+  if (argc > 4) {
+    if (strcmp(argv[4], "n") == 0) {
+      M->dirIs(Direction(NORTH));
+      printf("setting north\n");
+    } else if (strcmp(argv[4], "s") == 0) {
+      M->dirIs(Direction(SOUTH));
+      printf("setting south\n");
+    } else if (strcmp(argv[4], "e") == 0) {
+      M->dirIs(Direction(EAST));
+      printf("setting east\n");
+    } else if (strcmp(argv[4], "w") == 0) {
+      M->dirIs(Direction(WEST));
+      printf("setting west\n");
+    } else {
+      printf("invalid direction\n");
+    }
+  }
   /* So you can see what a Rat is supposed to look like, we create
    one rat in the single player mode Mazewar.
    It doesn't move, you can't shoot it, you can just walk around it */
@@ -61,7 +97,7 @@ void printMatrix() {
 /* ----------------------------------------------------------------------- */
 void choose_id() {
   int i, j;
-  //for testing corner case
+//for testing corner case
 //  static int x=0;
   bool success = false;
   short sum[MAX_RATS];
@@ -106,7 +142,7 @@ void play(void) {
     switch (M->joinState()) {
       /*=================WAITING======================*/
       case WAITING:
-        printf("in waiting state, waiting for 3 seconds\n");
+        printf("in waiting state, waiting for 5 seconds\n");
         if (event.eventType == EVENT_NETWORK) {
           processPacket(&event);
         }
@@ -276,7 +312,7 @@ void forward(void) {
 
   bool conflict = false;
   for (int i = 0; i < MAX_RATS; i++) {
-    if (M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+    if (M->mazeRats_[i].playing &&  M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
       conflict = true;
   }
   if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
@@ -314,7 +350,7 @@ void backward() {
   }
   bool conflict = false;
   for (int i = 0; i < MAX_RATS; i++) {
-    if (M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+    if (M->mazeRats_[i].playing && M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
       conflict = true;
   }
   if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
@@ -658,7 +694,7 @@ void sendPacket(MW244BPacket *packet) {
              (struct sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
   }
-  //increase sequence number here:
+//increase sequence number here:
   M->seqNumIs(M->seqNum() + 1);
   M->mazeRats_[MY_ID].seqNum = M->seqNum();
 }
@@ -736,7 +772,7 @@ void sendGameExit() {
 void processPacket(MWEvent *eventPacket) {
   MW244BPacket *pack = eventPacket->eventDetail;
   PacketBase *packBase = (PacketBase*) pack;
-  //TODO:  handle the corner case of ID conflict.
+//TODO:  handle the corner case of ID conflict.
   if (packBase->userId == MY_ID && ntohl(packBase->seqNum) > M->seqNum()) {
     printf("ID conflict! reset\n");
     M->reset();
@@ -746,12 +782,12 @@ void processPacket(MWEvent *eventPacket) {
     NewPosition(M);
     play();
   }
-  //handle the corner case of receiving packet from my self
+//handle the corner case of receiving packet from my self
   if (packBase->userId == MY_ID) {
     printf("\nreceived the packet from myself, discard\n");
     return;
   }
-  //handle the corner case of out order packet
+//handle the corner case of out order packet
   if (ntohl(packBase->seqNum) < M->mazeRats_[packBase->userId].seqNum) {
     printf("received out of order packet, discard\n");
     return;
@@ -768,9 +804,10 @@ void processPacket(MWEvent *eventPacket) {
       processNameReply((NameReplyPkt *) pack);
       break;
     case GAME_EXIT: {
+      processHeartBeat((HeartBeatPkt *) pack);
       GameExitPkt * packet = (GameExitPkt *) pack;
-      assert(packet->checkSumCorrect());
       packet->printPacket(0);
+      assert(packet->checkSumCorrect());
       processGameExit(packet->userId);
       break;
     }
@@ -836,10 +873,9 @@ void processHeartBeat(HeartBeatPkt *packet) {
   printMatrix();
   printf("my state = %d \n", M->joinState());
 
-
 //TODO:
-  //if (M->H_matrix[id][id] == -1)
-//received heart beat from a new player:
+//if (M->H_matrix[id][id] == -1)
+//I'm playing, while received heart beat from a new player:
   if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "")
       && M->joinState() == PLAYING) {
     short sum = 0;
@@ -894,7 +930,6 @@ void processHeartBeat(HeartBeatPkt *packet) {
   }
 //update score
   NewScoreCard();
-  M->scoreIs(Score(M->mazeRats_[MY_ID].score));
   updateView = true;
 
 }

@@ -198,27 +198,11 @@ class Rat {
         xMis(0),
         yMis(0),
         hasMissile(0),
-        score(0),
         id(0),
-        seqNum(0) {
+        seqNum(0),
+        name(""){
   }
-  ;
-  void setRat(bool playing_, Loc x_, Loc y_, Direction dir_, Loc xMis_,
-              Loc yMis_, RatId id_, timeval lastHeartBeatTime_, int score_,
-              bool hasMissile_, char * name_, uint32_t seqNum_) {
-    playing = playing_;
-    x = x_;
-    y = y_;
-    dir = dir_;
-    xMis = xMis_;
-    yMis = yMis_;
-    id = id_;
-    lastHeartBeatTime = lastHeartBeatTime_;
-    score = score_;
-    hasMissile = hasMissile_;
-    name = name_;  //TODO
-    seqNum = seqNum_;
-  }
+
   void reset() {
     playing = 0;
     x = 1;
@@ -227,7 +211,6 @@ class Rat {
     xMis = 0;
     yMis = 0;
     hasMissile = 0;
-    score = 0;
     id = 0;
     seqNum = 0;
     name = "";
@@ -238,7 +221,6 @@ class Rat {
   Loc xMis, yMis;
   RatId id;
   timeval lastHeartBeatTime;
-  int score;
   bool hasMissile;
   string name;
   uint32_t seqNum;
@@ -422,7 +404,6 @@ class MazewarInstance : public Fwk::NamedInterface {
     }
     score -= H_matrix[ratId][ratId];
     printf("final score = %d\n", score);
-    mazeRats_[ratId].score = score;
     return Score(score);
   }
   void setMeInArray(int ratId) {
@@ -434,7 +415,6 @@ class MazewarInstance : public Fwk::NamedInterface {
     mazeRats_[ratId].yMis = yMissile_;
     mazeRats_[ratId].id = myRatId_;
     mazeRats_[ratId].lastHeartBeatTime = lastMisUpdateTime_;
-    mazeRats_[ratId].score = score_.value();
     mazeRats_[ratId].hasMissile = hasMissile_;
     mazeRats_[ratId].name = name();
     mazeRats_[ratId].seqNum = seqNum_;
@@ -459,7 +439,6 @@ class MazewarInstance : public Fwk::NamedInterface {
     for (i = 0; i < MAX_RATS; i++) {
       printf("initializing M!!!!!=================\n");
       H_base[i] = 0;
-      H_occupied[i] = false;
       for (j = 0; j < MAX_RATS; j++) {
         H_matrix[i][j] = -1;
       }
@@ -491,7 +470,6 @@ class MazewarInstance : public Fwk::NamedInterface {
     for (i = 0; i < MAX_RATS; i++) {
       printf("initializing M!!!!!=================\n");
       H_base[i] = 0;
-      H_occupied[i] = false;
       for (j = 0; j < MAX_RATS; j++) {
         H_matrix[i][j] = -1;
       }
@@ -527,7 +505,6 @@ class MazewarInstance : public Fwk::NamedInterface {
   RatName myName_;
   int16_t H_matrix[MAX_RATS][MAX_RATS];
   int16_t H_base[MAX_RATS];
-  bool H_occupied[MAX_RATS];
   Rat mazeRats_[MAX_RATS];
 
 };
