@@ -44,7 +44,8 @@
 #define MAZEWAR_H
 
 #include "fwk/NamedInterface.h"
-
+#include "time.h"
+#include "stdlib.h"
 #include "Nominal.h"
 #include "Exception.h"
 #include <string>

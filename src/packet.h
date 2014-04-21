@@ -28,7 +28,7 @@ class PacketBase {
              uint32_t seqNum_)
       : type(type_),
         userId(userId_),
-        checkSum((0)),
+        checkSum(0),
         seqNum((seqNum_)) {
   }
   void printPacket(bool isSend);
@@ -62,7 +62,7 @@ class HeartBeatPkt : public PacketBase {
       hitCount[i] = htons(hitCount_[i]);
     }
     checkSum = cksum(this, sizeof(HeartBeatPkt));
-    printf("the assembled checksum = %d\n", checkSum);
+//    printf("the assembled checksum = %d\n", checkSum);
   }
   void printPacket(bool isSend);
   bool checkSumCorrect() {

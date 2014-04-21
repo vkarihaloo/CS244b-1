@@ -738,9 +738,58 @@ void processPacket(MWEvent *eventPacket) {
       break;
   }
 }
+void checkCollision(HeartBeatPkt *packet) {
 
+  short dx, dy;
+  int cnt=0;
+  printf("packet->ratX =%d, MY_X_LOC =%d,  packet->ratY =%d,  MY_Y_LOC=%d\n",
+  ntohs(packet->ratX),
+         MY_X_LOC, ntohs(packet->ratY), MY_Y_LOC);
+  if (ntohs(packet->ratX) == MY_X_LOC && ntohs(packet->ratY) == MY_Y_LOC) {
+    printf("location collision!\n");
+    Loc newX(0);
+    Loc newY(0);
+    Direction dir(0); /* start on occupied square */
+    bool conflict = true;
+    while (M->maze_[newX.value()][newY.value()] || conflict) {
+      srand(time(NULL));
+      dx = rand() % 3 - 1;
+      dy = rand() % 3 - 1;
+      printf("the rand dx, dy is %d, %d\n", dx, dy);
+      /* MAZE[XY]MAX is a power of 2 */
+      newX = Loc((MY_X_LOC + dx) & (MAZEXMAX - 1));
+      newY = Loc((MY_Y_LOC + dy) & (MAZEYMAX - 1));
+      // check that square is unoccupied by another rat
+      conflict = false;
+      for (int i = 0; i < MAX_RATS; i++) {
+        if (M->mazeRats_[i].x.value() == newX.value()
+            && M->mazeRats_[i].y.value() == newY.value())
+          conflict = true;
+      }
+      if (cnt++ > 0xffffff){
+        NewPosition(M);
+        break;
+      }
+    }
+    /* prevent a blank wall at first glimpse */
+
+    if (!M->maze_[(newX.value()) + 1][(newY.value())])
+      dir = Direction(NORTH);
+    if (!M->maze_[(newX.value()) - 1][(newY.value())])
+      dir = Direction(SOUTH);
+    if (!M->maze_[(newX.value())][(newY.value()) + 1])
+      dir = Direction(EAST);
+    if (!M->maze_[(newX.value())][(newY.value()) - 1])
+      dir = Direction(WEST);
+
+    M->xlocIs(newX);
+    M->ylocIs(newY);
+    M->dirIs(dir);
+  }
+}
 void processHeartBeat(HeartBeatPkt *packet) {
   assert(packet->checkSumCorrect());
+  checkCollision(packet);
   uint8_t id = packet->userId;
   int i;
   packet->printPacket(0);
