@@ -218,7 +218,19 @@ class Rat {
     hasMissile = hasMissile_;
     name = name_;  //TODO
     seqNum = seqNum_;
-
+  }
+  void reset() {
+    playing = 0;
+    x = 1;
+    y = 1;
+    dir = NORTH;
+    xMis = 0;
+    yMis = 0;
+    hasMissile = 0;
+    score = 0;
+    id = 0;
+    seqNum = 0;
+    name = "";
   }
   bool playing;
   Loc x, y;
@@ -427,6 +439,31 @@ class MazewarInstance : public Fwk::NamedInterface {
     mazeRats_[ratId].name = name();
     mazeRats_[ratId].seqNum = seqNum_;
 
+  }
+  void reset() {
+    dir_ = 0;
+    dirPeek_ = 0;
+    myRatId_ = 0xFE;
+    score_ = 0;
+    xloc_ = 1;
+    yloc_ = 3;
+    xPeek_ = 0;
+    yPeek_ = 0;
+    hasMissile_ = 0;
+    xMissile_ = 0;
+    yMissile_ = 0;
+    dirMissile_ = 0;
+    joinState_ = WAITING;
+    seqNum_ = 0;
+    int i, j;
+    for (i = 0; i < MAX_RATS; i++) {
+      printf("initializing M!!!!!=================\n");
+      H_base[i] = 0;
+      H_occupied[i] = false;
+      for (j = 0; j < MAX_RATS; j++) {
+        H_matrix[i][j] = -1;
+      }
+    }
   }
 
  protected:

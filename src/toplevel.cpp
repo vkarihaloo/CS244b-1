@@ -61,6 +61,8 @@ void printMatrix() {
 /* ----------------------------------------------------------------------- */
 void choose_id() {
   int i, j;
+  //for testing corner case
+//  static int x=0;
   bool success = false;
   short sum[MAX_RATS];
   for (i = 0; i < MAX_RATS; i++) {
@@ -70,6 +72,8 @@ void choose_id() {
     }
     if (success == false && sum[i] == -MAX_RATS) {
       M->myRatIdIs(RatId(i));
+      //for testing corner case of conflict id
+//      M->myRatIdIs(RatId(x++));
       success = true;
       M->H_matrix[MY_ID][MY_ID] = 0;
     }
@@ -641,6 +645,7 @@ void sendPacket(MW244BPacket *packet) {
     MWError("send error");
   }
   M->seqNumIs(M->seqNum() + 1);
+  M->mazeRats_[MY_ID].seqNum = M->seqNum();
 }
 
 void sendHeartBeat() {
@@ -648,6 +653,7 @@ void sendHeartBeat() {
                                                 (uint32_t) M->seqNum(),
                                                 MY_X_LOC,
                                                 MY_Y_LOC,
+                                                //12,1,
                                                 MY_DIR,
                                                 (int16_t) M->H_base[MY_ID],
                                                 MY_X_MIS,
@@ -657,7 +663,6 @@ void sendHeartBeat() {
   heartBeatPkt->printPacket(true);
   MW244BPacket *pack = new MW244BPacket();
   memcpy(pack, heartBeatPkt, sizeof(HeartBeatPkt));
-  char *aslong = (char *) pack;
   sendPacket(pack);
   delete heartBeatPkt;
   delete pack;
@@ -712,15 +717,27 @@ void sendGameExit() {
 void processPacket(MWEvent *eventPacket) {
   MW244BPacket *pack = eventPacket->eventDetail;
   PacketBase *packBase = (PacketBase*) pack;
+  //TODO:  handle the corner case of ID conflict.
+  if (packBase->userId == MY_ID && ntohl(packBase->seqNum) > M->seqNum()) {
+    printf("ID conflict! reset\n");
+    M->reset();
+    for (int j = 0; j < MAX_RATS; j++) {
+      M->mazeRats_[j].reset();
+    }
+    NewPosition(M);
+    play();
+  }
+  //handle the corner case of receiving packet from my self
   if (packBase->userId == MY_ID) {
-//    printf("\nreceived the packet from myself, discard\n");
+    printf("\nreceived the packet from myself, discard\n");
     return;
   }
-  printMatrix();
-  if (packBase->seqNum < M->mazeRats_[packBase->userId].seqNum) {
+  //handle the corner case of out order packet
+  if (ntohl(packBase->seqNum) < M->mazeRats_[packBase->userId].seqNum) {
     printf("received out of order packet, discard\n");
     return;
   }
+  printMatrix();
   switch (pack->type) {
     case HEART_BEAT:
       processHeartBeat((HeartBeatPkt *) pack);
@@ -741,7 +758,7 @@ void processPacket(MWEvent *eventPacket) {
 void checkCollision(HeartBeatPkt *packet) {
 
   short dx, dy;
-  int cnt=0;
+  int cnt = 0;
   printf("packet->ratX =%d, MY_X_LOC =%d,  packet->ratY =%d,  MY_Y_LOC=%d\n",
   ntohs(packet->ratX),
          MY_X_LOC, ntohs(packet->ratY), MY_Y_LOC);
@@ -766,7 +783,7 @@ void checkCollision(HeartBeatPkt *packet) {
             && M->mazeRats_[i].y.value() == newY.value())
           conflict = true;
       }
-      if (cnt++ > 0xffffff){
+      if (cnt++ > 0xffffff) {
         NewPosition(M);
         break;
       }
@@ -822,6 +839,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
   M->mazeRats_[id].dir = Direction(ntohs(packet->ratD));
   M->mazeRats_[id].xMis = Loc(ntohs(packet->misX));
   M->mazeRats_[id].yMis = Loc(ntohs(packet->misY));
+  M->mazeRats_[id].seqNum = ntohl(packet->seqNum);
 
 //update name for new player: when I'm waiting, I set the received rat to be playing in my rat array
   if (M->joinState() == WAITING) {
