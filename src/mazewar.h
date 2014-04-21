@@ -66,7 +66,7 @@
 #define EXIT_TIMEOUT 5000
 #define HEART_BEAT_RATE 500
 #define PACKET_DROP_RATE 0.5
-#define DEBUG 1
+#define DEBUG 0
 
 /* network stuff */
 /* Feel free to modify.  This is the simplest version we came up with */
@@ -387,13 +387,13 @@ class MazewarInstance : public Fwk::NamedInterface {
   }
   Score calculateScore(int ratId) {
     int16_t score = H_base[ratId];
-    printf("updating score card: score = %d \n", score);
-    for (int i = 0; i < 8; i++) {
-      for (int j = 0; j < 8; j++) {
-        printf("%3d ", H_matrix[i][j]);
-      }
-      printf("\n");
-    }
+//    printf("updating score card: score = %d \n", score);
+//    for (int i = 0; i < 8; i++) {
+//      for (int j = 0; j < 8; j++) {
+//        printf("%3d ", H_matrix[i][j]);
+//      }
+//      printf("\n");
+//    }
     for (int i = 0; i < MAX_RATS; i++) {
       if (i == ratId)
         continue;

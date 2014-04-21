@@ -601,7 +601,7 @@ void manageMissiles() {
     int newX = oldX;
     int newY = oldY;
 //    printf("oldX=%d, oldY=%d\n", oldX, oldY);
-    switch (MY_DIR) {
+    switch (MY_DIR_MIS) {
       case NORTH:
         newX = oldX + 1;
         break;
@@ -897,7 +897,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
     M->H_matrix[id][i] = ntohs(packet->hitCount[i]);
   }
   M->H_base[id] = ntohs(packet->scoreBase);
-  printf("updating scorebase for %d to %d\n", id, M->H_base[id]);
+//  printf("updating scorebase for %d to %d\n", id, M->H_base[id]);
 //update positions
   M->mazeRats_[id].x = Loc(ntohs(packet->ratX));
   M->mazeRats_[id].y = Loc(ntohs(packet->ratY));
