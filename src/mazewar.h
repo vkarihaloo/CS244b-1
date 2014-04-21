@@ -62,7 +62,7 @@
 /* You can modify this if you want to */
 #define	MAX_RATS	 8
 #define MISSILE_SPEED 500
-#define JOIN_TIMEOUT 2000
+#define JOIN_TIMEOUT 5000
 #define EXIT_TIMEOUT 5000
 #define HEART_BEAT_RATE 500
 
@@ -403,13 +403,13 @@ class MazewarInstance : public Fwk::NamedInterface {
   }
   Score calculateScore(int ratId) {
     int16_t score = H_base[ratId];
-//    printf("updating score card: score = %d \n", score);
-//    for (int i = 0; i < 8; i++) {
-//      for (int j = 0; j < 8; j++) {
-//        printf("%3d ", H_matrix[i][j]);
-//      }
-//      printf("\n");
-//    }
+    printf("updating score card: score = %d \n", score);
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        printf("%3d ", H_matrix[i][j]);
+      }
+      printf("\n");
+    }
     for (int i = 0; i < MAX_RATS; i++) {
       if (i == ratId)
         continue;
@@ -635,7 +635,7 @@ void processPacket(MWEvent *);
 void processHeartBeat(HeartBeatPkt *);
 void processNameRequest(NameRequestPkt *);
 void processNameReply(NameReplyPkt *);
-void processGameExit(GameExitPkt *);
+void processGameExit(uint8_t);
 
 void netInit(void);
 bool isTimeOut(timeval, long);

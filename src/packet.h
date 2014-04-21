@@ -116,16 +116,34 @@ class NameReplyPkt : public PacketBase {
 
 class GameExitPkt : public PacketBase {
  public:
+  int16_t ratX;
+  int16_t ratY;
+  int16_t ratD;
+  int16_t scoreBase;
+  int16_t misX;
+  int16_t misY;
+  int16_t hitCount[MAX_RATS];
   GameExitPkt() {
   }
-  GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_)
-      : PacketBase(GAME_EXIT, userId_, htons(checkSum_), htonl(seqNum_)) {
+  GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_,
+              int16_t ratX_, int16_t ratY_, int16_t ratD_, int16_t scoreBase_,
+              int16_t misX_, int16_t misY_, int16_t *hitCount_)
+      : PacketBase(GAME_EXIT, userId_, htons(checkSum_), htonl(seqNum_)),
+        ratX(htons(ratX_)),
+        ratY(htons(ratY_)),
+        ratD(htons(ratD_)),
+        scoreBase(htons(scoreBase_)),
+        misX(htons(misX_)),
+        misY(htons(misY_)) {
+    for (int i = 0; i < MAX_RATS; i++) {
+      hitCount[i] = htons(hitCount_[i]);
+    }
     checkSum = cksum(this, sizeof(GameExitPkt));
+//    printf("the assembled checksum = %d\n", checkSum);
   }
   bool checkSumCorrect() {
     return cksum(this, sizeof(GameExitPkt)) == 0xffff;
   }
-
 }__attribute__ ((packed));
 
 #endif
