@@ -312,7 +312,8 @@ void forward(void) {
 
   bool conflict = false;
   for (int i = 0; i < MAX_RATS; i++) {
-    if (M->mazeRats_[i].playing &&  M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+    if (M->mazeRats_[i].playing && M->mazeRats_[i].x.value() == tx
+        && M->mazeRats_[i].y.value() == ty)
       conflict = true;
   }
   if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
@@ -350,7 +351,8 @@ void backward() {
   }
   bool conflict = false;
   for (int i = 0; i < MAX_RATS; i++) {
-    if (M->mazeRats_[i].playing && M->mazeRats_[i].x.value() == tx && M->mazeRats_[i].y.value() == ty)
+    if (M->mazeRats_[i].playing && M->mazeRats_[i].x.value() == tx
+        && M->mazeRats_[i].y.value() == ty)
       conflict = true;
   }
   if (conflict == false && ((MY_X_LOC != tx) || (MY_Y_LOC != ty))) {
@@ -683,13 +685,13 @@ void sendPacketToPlayer(RatId ratId) {
 
 void sendPacket(MW244BPacket *packet) {
 // TODO:
-//  if (DEBUG) {
-//    float rate = (float) rand() / (float) RAND_MAX;
-//    if (rate < PACKET_DROP_RATE) {
-//      delete pack;
-//      return;
-//    }
-//  }
+  if (DEBUG) {
+    float rate = (float) rand() / (float) RAND_MAX;
+    if (rate < PACKET_DROP_RATE) {
+      printf("dropping packet!! type = ", packet->type);
+      return;
+    }
+  }
   if (sendto((int) M->theSocket(), (void *) packet, sizeof(MW244BPacket), 0,
              (struct sockaddr *) &groupAddr, sizeof(Sockaddr)) < 0) {
     MWError("send error");
@@ -895,6 +897,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
     M->H_matrix[id][i] = ntohs(packet->hitCount[i]);
   }
   M->H_base[id] = ntohs(packet->scoreBase);
+  printf("updating scorebase for %d to %d\n", id, M->H_base[id]);
 //update positions
   M->mazeRats_[id].x = Loc(ntohs(packet->ratX));
   M->mazeRats_[id].y = Loc(ntohs(packet->ratY));
@@ -956,16 +959,23 @@ void processGameExit(uint8_t id) {
   int i;
   printf("rat %d is exit\n", id);
   for (i = 0; i < MAX_RATS; i++) {
-    M->H_base[i] -= M->H_matrix[id][i] * LOSE_SCORE;
-    M->H_base[i] += M->H_matrix[i][id] * WIN_SCORE;
+  //i = MY_ID;
+    if (M->mazeRats_[i].playing) {
+      M->H_base[i] -= (
+          M->H_matrix[id][i] > 0 ? M->H_matrix[id][i] * LOSE_SCORE : 0);
+      M->H_base[i] += (
+          M->H_matrix[i][id] > 0 ? M->H_matrix[i][id] * WIN_SCORE : 0);
+      printf("on exit detection updating scorebase for %d to %d\n", i,
+             M->H_base[i]);
+    }
   }
   for (i = 0; i < MAX_RATS; i++) {
     M->H_matrix[id][i] = -1;
     M->H_matrix[i][id] = -1;
+    M->H_base[id] = 0;
+    M->mazeRats_[id].reset();
+    NewScoreCard();
   }
-  M->H_base[id] = 0;
-  M->mazeRats_[id].reset();
-  NewScoreCard();
 }
 
 /* ----------------------------------------------------------------------- */

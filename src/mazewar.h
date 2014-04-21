@@ -65,6 +65,8 @@
 #define JOIN_TIMEOUT 5000
 #define EXIT_TIMEOUT 5000
 #define HEART_BEAT_RATE 500
+#define PACKET_DROP_RATE 0.5
+#define DEBUG 1
 
 /* network stuff */
 /* Feel free to modify.  This is the simplest version we came up with */
