@@ -9,12 +9,27 @@
 
 //extern MazewarInstance::Ptr M;
 
+uint16_t PacketBase::cksum(const void *_data, int len) {
+  const uint8_t *data =(const uint8_t*) _data;
+  uint32_t sum;
+
+  for (sum = 0; len >= 2; data += 2, len -= 2)
+    sum += data[0] << 8 | data[1];
+  if (len > 0)
+    sum += data[0] << 8;
+  while (sum > 0xffff)
+    sum = (sum >> 16) + (sum & 0xffff);
+  sum = htons(~sum);
+  return sum ? sum : 0xffff;
+}
+
 void PacketBase::printPacket(bool isSend) {
   int i;
   char *packetTypeStr[] = { "heart beat", "name request", "name reply",
       "game exit" };
   if (isSend) {
-    printf("\n<<<<<===== Player %d sending a %s packet, seqNum = %d\n", userId, packetTypeStr[type], ntohl(seqNum));
+    printf("\n<<<<<===== Player %d sending a %s packet, seqNum = %d\n", userId,
+           packetTypeStr[type], ntohl(seqNum));
   } else {
     printf("\n====>>>>>>>  received a %s packet from %d, seqNum=%d\n",
            packetTypeStr[type], userId, ntohl(seqNum));
@@ -35,7 +50,8 @@ void HeartBeatPkt::printPacket(bool isSend) {
   char *packetTypeStr[] = { "heart beat", "name request", "name reply",
       "game exit" };
   if (isSend) {
-    printf("\n<<<<<===== Player %d sending a %s packet, seqNum = %d\n", userId, packetTypeStr[type], ntohl(seqNum));
+    printf("\n<<<<<===== Player %d sending a %s packet, seqNum = %d\n", userId,
+           packetTypeStr[type], ntohl(seqNum));
   } else {
     printf("\n====>>>>>>>  received a %s packet from %d, seqNum=%d\n",
            packetTypeStr[type], userId, ntohl(seqNum));
@@ -50,7 +66,8 @@ void HeartBeatPkt::printPacket(bool isSend) {
 //  printf("\n");
   printf(
       " ratX = %hd, ratY = %hd, ratD = %hd, scoreBase = %hd, misX = %hd, misY = %hd \n hitCount=[%hd %hd %hd %hd %hd %hd %hd %hd]\n",
-      ntohs(ratX), ntohs(ratY), ntohs(ratD),
+      ntohs(ratX),
+      ntohs(ratY), ntohs(ratD),
       ntohs(scoreBase),
       ntohs(misX), ntohs(misY), ntohs(hitCount[0]), ntohs(hitCount[1]),
       ntohs(hitCount[2]),

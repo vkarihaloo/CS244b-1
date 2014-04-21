@@ -740,6 +740,7 @@ void processPacket(MWEvent *eventPacket) {
 }
 
 void processHeartBeat(HeartBeatPkt *packet) {
+  assert(packet->checkSumCorrect());
   uint8_t id = packet->userId;
   int i;
   packet->printPacket(0);
@@ -806,6 +807,7 @@ void processHeartBeat(HeartBeatPkt *packet) {
 
 }
 void processNameRequest(NameRequestPkt *packet) {
+  assert(packet->checkSumCorrect());
   if (packet->targetUserId != MY_ID)
     return;
   uint8_t id = packet->userId;
@@ -815,6 +817,7 @@ void processNameRequest(NameRequestPkt *packet) {
 
 }
 void processNameReply(NameReplyPkt *packet) {
+  assert(packet->checkSumCorrect());
   uint8_t id = packet->userId;
   packet->printPacket(0);
   M->mazeRats_[id].name = packet->name;
@@ -823,6 +826,7 @@ void processNameReply(NameReplyPkt *packet) {
 
 }
 void processGameExit(GameExitPkt *packet) {
+  assert(packet->checkSumCorrect());
   uint8_t id = packet->userId;
   packet->printPacket(0);
 }

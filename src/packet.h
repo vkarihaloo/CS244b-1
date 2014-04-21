@@ -28,11 +28,12 @@ class PacketBase {
              uint32_t seqNum_)
       : type(type_),
         userId(userId_),
-        checkSum((checkSum_)),
+        checkSum((0)),
         seqNum((seqNum_)) {
   }
   void printPacket(bool isSend);
-//  virtual void processPacket()=0;
+  uint16_t cksum(const void *_data, int len);
+
 }__attribute__ ((packed));
 
 class HeartBeatPkt : public PacketBase {
@@ -60,8 +61,13 @@ class HeartBeatPkt : public PacketBase {
     for (int i = 0; i < MAX_RATS; i++) {
       hitCount[i] = htons(hitCount_[i]);
     }
+    checkSum = cksum(this, sizeof(HeartBeatPkt));
+    printf("the assembled checksum = %d\n", checkSum);
   }
   void printPacket(bool isSend);
+  bool checkSumCorrect() {
+    return cksum(this, sizeof(HeartBeatPkt)) == 0xffff;
+  }
 }__attribute__ ((packed));
 
 class NameRequestPkt : public PacketBase {
@@ -79,7 +85,12 @@ class NameRequestPkt : public PacketBase {
       name[i] = name_[i];
     }
     name[i] = '\0';
+    checkSum = cksum(this, sizeof(NameRequestPkt));
   }
+  bool checkSumCorrect() {
+    return cksum(this, sizeof(NameRequestPkt)) == 0xffff;
+  }
+
 }__attribute__ ((packed));
 
 class NameReplyPkt : public PacketBase {
@@ -95,7 +106,12 @@ class NameReplyPkt : public PacketBase {
       name[i] = name_[i];
     }
     name[i] = '\0';
+    checkSum = cksum(this, sizeof(NameReplyPkt));
   }
+  bool checkSumCorrect() {
+    return cksum(this, sizeof(NameReplyPkt)) == 0xffff;
+  }
+
 }__attribute__ ((packed));
 
 class GameExitPkt : public PacketBase {
@@ -104,8 +120,12 @@ class GameExitPkt : public PacketBase {
   }
   GameExitPkt(uint8_t userId_, uint16_t checkSum_, uint32_t seqNum_)
       : PacketBase(GAME_EXIT, userId_, htons(checkSum_), htonl(seqNum_)) {
-
+    checkSum = cksum(this, sizeof(GameExitPkt));
   }
+  bool checkSumCorrect() {
+    return cksum(this, sizeof(GameExitPkt)) == 0xffff;
+  }
+
 }__attribute__ ((packed));
 
 #endif
