@@ -95,7 +95,7 @@ void printMatrix() {
   }
 }
 /* ----------------------------------------------------------------------- */
-void choose_id() {
+bool choose_id() {
   int i, j;
 //for testing corner case
 //  static int x=0;
@@ -114,17 +114,19 @@ void choose_id() {
       M->H_matrix[MY_ID][MY_ID] = 0;
     }
   }
-  for (i = 0; i != MY_ID && i < MAX_RATS; i++) {
-    if (sum[i] != -MAX_RATS) {
-      M->H_matrix[MY_ID][i] = 0;
+  if (success == true) {
+    for (i = 0; i != MY_ID && i < MAX_RATS; i++) {
+      if (sum[i] != -MAX_RATS) {
+        M->H_matrix[MY_ID][i] = 0;
+      }
     }
-  }
-  if (success)
     printf("choose id done! id = %d ", MY_ID);
-  printMatrix();
-  if (success == false) {
+    printMatrix();
+    return true;
+  } else if (success == false) {
     printf("choose id fail! id = %d ", MY_ID);
-    choose_id();
+    printMatrix();
+    return false;
   }
 }
 
@@ -145,6 +147,8 @@ void play(void) {
         printf("in waiting state, waiting for 5 seconds\n");
         if (event.eventType == EVENT_NETWORK) {
           processPacket(&event);
+        } else if (event.eventType == EVENT_INT) {
+          quit(0);
         }
         if (isTimeOut(joinTime, JOIN_TIMEOUT)) {
           M->joinStateIs(INITING);
@@ -154,7 +158,10 @@ void play(void) {
       case INITING:
         printf("in initing state\n");
         printMatrix();
-        choose_id();
+        if (choose_id() == false) {
+          M->joinStateIs(WAITING);
+          break;
+        }
         M->setMeInArray(MY_ID);  //set me as playing
         M->joinStateIs(PLAYING);
         sendHeartBeat();
@@ -498,6 +505,7 @@ void shoot() {
  */
 
 void quit(int sig) {
+  printf("quiting ===============");
   sendGameExit();
   StopWindow();
   exit(0);
@@ -748,6 +756,12 @@ void sendNameReply() {
 
 }
 void sendGameExit() {
+  if (MY_ID >= MAX_RATS) {
+    printf("exit on Joing state!!!!!");
+    return;
+  }
+  if (M->joinState() != PLAYING)
+    return;
   GameExitPkt *gameExitPkt = new GameExitPkt((uint8_t) MY_ID, (uint16_t) 0,
                                              (uint32_t) M->seqNum(),
                                              MY_X_LOC,
@@ -783,12 +797,12 @@ void processPacket(MWEvent *eventPacket) {
     play();
   }
 //handle the corner case of receiving packet from my self
-  if (packBase->userId == MY_ID) {
+  else if (packBase->userId == MY_ID) {
     printf("\nreceived the packet from myself, discard\n");
     return;
   }
 //handle the corner case of out order packet
-  if (ntohl(packBase->seqNum) < M->mazeRats_[packBase->userId].seqNum) {
+  else if (ntohl(packBase->seqNum) < M->mazeRats_[packBase->userId].seqNum) {
     printf("received out of order packet, discard\n");
     return;
   }
@@ -954,6 +968,10 @@ void processNameReply(NameReplyPkt *packet) {
 
 }
 void processGameExit(uint8_t id) {
+  if (id >= MAX_RATS)
+    return;
+//  if (M->mazeRats_[id].playing == false)
+//    return;
   int i;
   printf("rat %d is exit\n", id);
   for (i = 0; i < MAX_RATS; i++) {
@@ -970,10 +988,10 @@ void processGameExit(uint8_t id) {
   for (i = 0; i < MAX_RATS; i++) {
     M->H_matrix[id][i] = -1;
     M->H_matrix[i][id] = -1;
-    M->H_base[id] = 0;
-    M->mazeRats_[id].reset();
-    NewScoreCard();
   }
+  M->H_base[id] = 0;
+  M->mazeRats_[id].reset();
+  NewScoreCard();
 }
 
 /* ----------------------------------------------------------------------- */
