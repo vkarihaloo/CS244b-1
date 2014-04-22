@@ -1,0 +1,10 @@
+CS244b 
+======
+
+distributed system project protocol change log:
+1. changed the following bit width
+	Type: changed from 4 bits to 8 bits	
+	UserID: changed from 4 bits to 8 bits	
+	Reserved: changed from 8 bits to none	
+2. in NameRequest packet changed the following bit width:
+	Target Id: changed from 4 bits to 8 bits	
