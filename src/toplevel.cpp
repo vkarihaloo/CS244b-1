@@ -28,13 +28,11 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, quit);
   signal(SIGTERM, quit);
 
-  printf("argc=%d\n", argc);
   if (argc > 1) {
     ratName = (char*) malloc((unsigned) (strlen(argv[1]) + 1));
     if (ratName == NULL)
       MWError("no mem for ratName");
     strcpy(ratName, argv[1]);
-    printf("name is : %s", ratName);
   } else {
     getName("Welcome to CS244B MazeWar!\n\nYour Name", &ratName);
     ratName[strlen(ratName) - 1] = 0;
@@ -821,7 +819,6 @@ void processPacket(MWEvent *eventPacket) {
       processHeartBeat((HeartBeatPkt *) pack);
       GameExitPkt * packet = (GameExitPkt *) pack;
       packet->printPacket(0);
-      assert(packet->checkSumCorrect());
       processGameExit(packet->userId);
       break;
     }
@@ -879,7 +876,8 @@ void checkCollision(HeartBeatPkt *packet) {
   }
 }
 void processHeartBeat(HeartBeatPkt *packet) {
-  assert(packet->checkSumCorrect());
+  if (packet->checkSumCorrect() == false)
+    return;
   checkCollision(packet);
   uint8_t id = packet->userId;
   int i;
@@ -887,19 +885,9 @@ void processHeartBeat(HeartBeatPkt *packet) {
   printMatrix();
   printf("my state = %d \n", M->joinState());
 
-//TODO:
-//if (M->H_matrix[id][id] == -1)
 //I'm playing, while received heart beat from a new player:
   if ((M->mazeRats_[id].playing == false || M->mazeRats_[id].name == "")
       && M->joinState() == PLAYING) {
-    short sum = 0;
-    for (i = 0; i < 8; i++)
-      sum += M->H_matrix[id][i];
-//    assert(sum == -8);
-    sum = 0;
-    for (i = 0; i < 8; i++)
-      sum += M->H_matrix[i][id];
-//    assert(sum == -8);
     M->H_matrix[MY_ID][id] = 0;
     sendNameRequest((uint8_t) id);
   }
@@ -949,7 +937,8 @@ void processHeartBeat(HeartBeatPkt *packet) {
 
 }
 void processNameRequest(NameRequestPkt *packet) {
-  assert(packet->checkSumCorrect());
+  if (packet->checkSumCorrect() == false)
+    return;
   if (packet->targetUserId != MY_ID)
     return;
   uint8_t id = packet->userId;
@@ -959,7 +948,8 @@ void processNameRequest(NameRequestPkt *packet) {
 
 }
 void processNameReply(NameReplyPkt *packet) {
-  assert(packet->checkSumCorrect());
+  if (packet->checkSumCorrect() == false)
+    return;
   uint8_t id = packet->userId;
   packet->printPacket(0);
   M->mazeRats_[id].name = packet->name;
@@ -1000,7 +990,6 @@ void processGameExit(uint8_t id) {
  It is here to provide an example of how to open a UDP port.
  You might choose to use a different strategy
  */
-//TODO
 void netInit() {
   Sockaddr nullAddr;
   Sockaddr *thisHost;
@@ -1069,7 +1058,6 @@ void netInit() {
   printf("\n");
 
   /* set up some stuff strictly for this local sample */
-//TODO:
 //  M->myRatIdIs(0);
 //  M->scoreIs(0);
 //  SetMyRatIndexType(0);
