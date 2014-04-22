@@ -694,7 +694,7 @@ void sendPacket(MW244BPacket *packet) {
   if (DEBUG) {
     float rate = (float) rand() / (float) RAND_MAX;
     if (rate < PACKET_DROP_RATE) {
-      printf("dropping packet!! type = ", packet->type);
+      printf("dropping packet!! type = %d", packet->type);
       return;
     }
   }
@@ -938,10 +938,10 @@ void processHeartBeat(HeartBeatPkt *packet) {
     M->H_matrix[MY_ID][id]++;
     M->hasMissileIs(FALSE);
     clearSquare(M->xMissile(), M->yMissile());
-    M->xMissileIs(Loc(0));
-    M->yMissileIs(Loc(0));
     printMatrix();
     sendHeartBeat();
+    M->xMissileIs(Loc(0));
+    M->yMissileIs(Loc(0));
   }
 //update score
   NewScoreCard();
