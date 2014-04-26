@@ -839,25 +839,26 @@ void checkCollision(HeartBeatPkt *packet) {
     Loc newY(0);
     Direction dir(0); /* start on occupied square */
     bool conflict = true;
+    int round = 1;
     while (M->maze_[newX.value()][newY.value()] || conflict) {
-      srand(time(NULL));
-      dx = rand() % 3 - 1;
-      dy = rand() % 3 - 1;
-      printf("the rand dx, dy is %d, %d\n", dx, dy);
-      /* MAZE[XY]MAX is a power of 2 */
-      newX = Loc((MY_X_LOC + dx) & (MAZEXMAX - 1));
-      newY = Loc((MY_Y_LOC + dy) & (MAZEYMAX - 1));
-      // check that square is unoccupied by another rat
-      conflict = false;
-      for (int i = 0; i < MAX_RATS; i++) {
-        if (M->mazeRats_[i].x.value() == newX.value()
-            && M->mazeRats_[i].y.value() == newY.value())
-          conflict = true;
+      for (dx = -round; dx <= round && conflict; dx += 1) {
+        for (dy = -round; dy <= round && conflict; dy += 1) {
+          printf("round = %d, the rand dx, dy is %d, %d\n", round, dx, dy);
+          /* MAZE[XY]MAX is a power of 2 */
+          newX = Loc((MY_X_LOC + dx) & (MAZEXMAX - 1));
+          newY = Loc((MY_Y_LOC + dy) & (MAZEYMAX - 1));
+          // check that square is unoccupied by another rat
+          conflict = false;
+          for (int i = 0; i < MAX_RATS; i++) {
+            if ((M->mazeRats_[i].x.value() == newX.value()
+                && M->mazeRats_[i].y.value() == newY.value())
+                || M->maze_[newX.value()][newY.value()])
+              conflict = true;
+          }
+        }
       }
-      if (cnt++ > 0xffffff) {
-        NewPosition(M);
-        break;
-      }
+      round += 1;
+      printf("round=%d", round);
     }
     /* prevent a blank wall at first glimpse */
 
