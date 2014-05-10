@@ -18,139 +18,129 @@
 
 /* ------------------------------------------------------------------ */
 
-int
-InitReplFs( unsigned short portNum, int packetLoss, int numServers ) {
+int InitReplFs(unsigned short portNum, int packetLoss, int numServers) {
 #ifdef DEBUG
-  printf( "InitReplFs: Port number %d, packet loss %d percent, %d servers\n", 
-	  portNum, packetLoss, numServers );
+  printf("InitReplFs: Port number %d, packet loss %d percent, %d servers\n",
+         portNum, packetLoss, numServers);
 #endif
 
   /****************************************************/
   /* Initialize network access, local state, etc.     */
   /****************************************************/
 
-  return( NormalReturn );  
+  return (NormalReturn);
 }
 
 /* ------------------------------------------------------------------ */
 
-int
-OpenFile( char * fileName ) {
+int OpenFile(char * fileName) {
   int fd;
 
-  ASSERT( fileName );
+  ASSERT(fileName);
 
 #ifdef DEBUG
-  printf( "OpenFile: Opening File '%s'\n", fileName );
+  printf("OpenFile: Opening File '%s'\n", fileName);
 #endif
 
-  fd = open( fileName, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR );
+  fd = open(fileName, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
 
 #ifdef DEBUG
-  if ( fd < 0 )
-    perror( "OpenFile" );
+  if (fd < 0)
+    perror("OpenFile");
 #endif
 
-  return( fd );
+  return (fd);
 }
 
 /* ------------------------------------------------------------------ */
 
-int
-WriteBlock( int fd, char * buffer, int byteOffset, int blockSize ) {
+int WriteBlock(int fd, char * buffer, int byteOffset, int blockSize) {
   //char strError[64];
   int bytesWritten;
 
-  ASSERT( fd >= 0 );
-  ASSERT( byteOffset >= 0 );
-  ASSERT( buffer );
-  ASSERT( blockSize >= 0 && blockSize < MaxBlockLength );
+  ASSERT(fd >= 0);
+  ASSERT(byteOffset >= 0);
+  ASSERT(buffer);
+  ASSERT(blockSize >= 0 && blockSize < MaxBlockLength);
 
 #ifdef DEBUG
-  printf( "WriteBlock: Writing FD=%d, Offset=%d, Length=%d\n",
-	fd, byteOffset, blockSize );
+  printf("WriteBlock: Writing FD=%d, Offset=%d, Length=%d\n", fd, byteOffset,
+         blockSize);
 #endif
 
-  if ( lseek( fd, byteOffset, SEEK_SET ) < 0 ) {
-    perror( "WriteBlock Seek" );
-    return(ErrorReturn);
+  if (lseek(fd, byteOffset, SEEK_SET) < 0) {
+    perror("WriteBlock Seek");
+    return (ErrorReturn);
   }
 
-  if ( ( bytesWritten = write( fd, buffer, blockSize ) ) < 0 ) {
-    perror( "WriteBlock write" );
-    return(ErrorReturn);
+  if ((bytesWritten = write(fd, buffer, blockSize)) < 0) {
+    perror("WriteBlock write");
+    return (ErrorReturn);
   }
 
-  return( bytesWritten );
+  return (bytesWritten);
 
 }
 
 /* ------------------------------------------------------------------ */
 
-int
-Commit( int fd ) {
-  ASSERT( fd >= 0 );
+int Commit(int fd) {
+  ASSERT(fd >= 0);
 
 #ifdef DEBUG
-  printf( "Commit: FD=%d\n", fd );
+  printf("Commit: FD=%d\n", fd);
 #endif
 
-	/****************************************************/
-	/* Prepare to Commit Phase			    */
-	/* - Check that all writes made it to the server(s) */
-	/****************************************************/
+  /****************************************************/
+  /* Prepare to Commit Phase			    */
+  /* - Check that all writes made it to the server(s) */
+  /****************************************************/
 
-	/****************/
-	/* Commit Phase */
-	/****************/
+  /****************/
+  /* Commit Phase */
+  /****************/
 
-  return( NormalReturn );
+  return (NormalReturn);
 
 }
 
 /* ------------------------------------------------------------------ */
 
-int
-Abort( int fd )
-{
-  ASSERT( fd >= 0 );
+int Abort(int fd) {
+  ASSERT(fd >= 0);
 
 #ifdef DEBUG
-  printf( "Abort: FD=%d\n", fd );
+  printf("Abort: FD=%d\n", fd);
 #endif
 
   /*************************/
   /* Abort the transaction */
   /*************************/
 
-  return(NormalReturn);
+  return (NormalReturn);
 }
 
 /* ------------------------------------------------------------------ */
 
-int
-CloseFile( int fd ) {
+int CloseFile(int fd) {
 
-  ASSERT( fd >= 0 );
+  ASSERT(fd >= 0);
 
 #ifdef DEBUG
-  printf( "Close: FD=%d\n", fd );
+  printf("Close: FD=%d\n", fd);
 #endif
 
-	/*****************************/
-	/* Check for Commit or Abort */
-	/*****************************/
+  /*****************************/
+  /* Check for Commit or Abort */
+  /*****************************/
 
-  if ( close( fd ) < 0 ) {
+  if (close(fd) < 0) {
     perror("Close");
-    return(ErrorReturn);
+    return (ErrorReturn);
   }
 
-  return(NormalReturn);
+  return (NormalReturn);
 }
 
 /* ------------------------------------------------------------------ */
-
-
-
 

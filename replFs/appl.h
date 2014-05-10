@@ -12,9 +12,7 @@ int const MaxBlockLength = 512;
 int const ReplFsPort = 5000;
 
 int const NormalExit = 0;
-int const  ErrorExit = -1;
-
+int const ErrorExit = -1;
 
 /* ------------------------------------------------------------------ */
-
 
