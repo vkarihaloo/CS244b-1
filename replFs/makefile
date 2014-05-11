@@ -15,8 +15,8 @@ CLIENT_OBJECTS = client.o
 
 all:	appl
 
-appl:	appl.o $(C_DIR)/libclientReplFs.a
-	$(CCF) -o appl appl.o $(LIBDIRS) $(LIBS)
+appl:	appl.o     $(C_DIR)/libclientReplFs.a
+	$(CCF) -o appl appl.o $(LIBDIRS) $(LIBS)  #appl depends on only appl.o and the .a library
 
 appl.o:	appl.c client.h appl.h
 	$(CCF) -c $(INCDIR) appl.c
@@ -31,3 +31,8 @@ client.o:	client.c client.h
 clean:
 	rm -f appl *.o *.a
 
+#gcc -g -Wall -DSUN -c -I. appl.c
+#gcc -g -Wall -DSUN -c -I. client.c
+#ar cr libclientReplFs.a client.o
+#ranlib libclientReplFs.a
+#gcc -g -Wall -DSUN -o appl appl.o -L. -lclientReplFs
