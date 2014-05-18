@@ -1,9 +1,10 @@
 /****************/
-/* Your Name	*/
-/* Date		*/
-/* CS 244B	*/
-/* Spring 2014	*/
+/* Song Han*/
+/* Date May 17  */
+/* CS 244B  */
+/* Spring 2014  */
 /****************/
+
 
 #define DEBUG
 
@@ -13,7 +14,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <assert.h>
-
+#include <debug.h>
 #include <client.h>
 
 /* ------------------------------------------------------------------ */
@@ -38,16 +39,12 @@ int OpenFile(char * fileName) {
 
   ASSERT(fileName);
 
-#ifdef DEBUG
-  printf("OpenFile: Opening File '%s'\n", fileName);
-#endif
+  DBG("OpenFile: Opening File '%s'\n", fileName);
 
   fd = open(fileName, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
 
-#ifdef DEBUG
   if (fd < 0)
-    perror("OpenFile");
-#endif
+    perror("OpenFile error");
 
   return (fd);
 }
@@ -58,15 +55,15 @@ int WriteBlock(int fd, char * buffer, int byteOffset, int blockSize) {
   //char strError[64];
   int bytesWritten;
 
+  //TODO: return -1 for the following:
   ASSERT(fd >= 0);
   ASSERT(byteOffset >= 0);
   ASSERT(buffer);
   ASSERT(blockSize >= 0 && blockSize < MaxBlockLength);
+  ASSERT(byteOffset + blockSize < MaxFileSize);
 
-#ifdef DEBUG
-  printf("WriteBlock: Writing FD=%d, Offset=%d, Length=%d\n", fd, byteOffset,
-         blockSize);
-#endif
+  DBG("WriteBlock: Writing FD=%d, Offset in the file =%d, Length in the buffer to write=%d\n", fd, byteOffset,
+      blockSize);
 
   if (lseek(fd, byteOffset, SEEK_SET) < 0) {
     perror("WriteBlock Seek");
@@ -77,9 +74,7 @@ int WriteBlock(int fd, char * buffer, int byteOffset, int blockSize) {
     perror("WriteBlock write");
     return (ErrorReturn);
   }
-
   return (bytesWritten);
-
 }
 
 /* ------------------------------------------------------------------ */
@@ -126,9 +121,7 @@ int CloseFile(int fd) {
 
   ASSERT(fd >= 0);
 
-#ifdef DEBUG
-  printf("Close: FD=%d\n", fd);
-#endif
+  DBG("Close: FD=%d\n", fd);
 
   /*****************************/
   /* Check for Commit or Abort */
