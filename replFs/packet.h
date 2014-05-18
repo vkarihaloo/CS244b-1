@@ -57,7 +57,12 @@ class PacketBase {
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
                                                         //const, because it can't change members
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
-};
+  virtual void printPacket();
+  uint16_t cksum(const void *_data, int len);
+  bool checkSumCorrect();
+
+}
+;
 
 class OpenPkt : public PacketBase {
  public:
@@ -71,6 +76,7 @@ class OpenPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class OpenAckPkt : public PacketBase {
@@ -85,6 +91,7 @@ class OpenAckPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class WriteBlockPkt : public PacketBase {
@@ -102,6 +109,7 @@ class WriteBlockPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class CommitVotingPkt : public PacketBase {
@@ -116,6 +124,7 @@ class CommitVotingPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class CommitVotingSuccessPkt : public PacketBase {
@@ -128,6 +137,7 @@ class CommitVotingSuccessPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class CommitVotingResendPkt : public PacketBase {
@@ -143,6 +153,7 @@ class CommitVotingResendPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class CommitFinalPkt : public PacketBase {
@@ -155,6 +166,7 @@ class CommitFinalPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class CommitFinalReplyPkt : public PacketBase {
@@ -169,6 +181,7 @@ class CommitFinalReplyPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class AbortPkt : public PacketBase {
@@ -181,6 +194,7 @@ class AbortPkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
 
 class ClosePkt : public PacketBase {
@@ -195,8 +209,8 @@ class ClosePkt : public PacketBase {
   }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
 };
-
 
 //overloaded << and >> for serialization and de-serialization. Since all serialization methods are
 //virtual, this supports polymorphism and dynamic dispatch
