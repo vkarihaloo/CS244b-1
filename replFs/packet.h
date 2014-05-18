@@ -196,5 +196,13 @@ class ClosePkt : public PacketBase {
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
 };
+
+
+//overloaded << and >> for serialization and de-serialization. Since all serialization methods are
+//virtual, this supports polymorphism and dynamic dispatch
+std::istream& operator>>(std::istream &stream, PacketBase &packet);
+
+std::ostream& operator<<(std::ostream &stream, const PacketBase &packet);
+
 #endif /* PACKET_H_ */
 
