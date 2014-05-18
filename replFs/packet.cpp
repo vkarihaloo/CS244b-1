@@ -228,3 +228,14 @@ void ClosePkt::deserialize(std::istream& stream) {
   stream.read(reinterpret_cast<char *>(&totalPending), sizeof(totalPending));
 }
 
+
+std::istream& operator>>(std::istream &stream, PacketBase &packet) {
+  packet.deserialize(stream);
+  return stream;
+}
+
+std::ostream& operator<<(std::ostream &stream, const PacketBase &packet) {
+  packet.serialize(stream);
+  return stream;
+}
+
