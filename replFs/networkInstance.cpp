@@ -7,7 +7,7 @@
 
 #include "networkInstance.h"
 
-Network::Network() {
+Network::Network(int group, int port, int dropRate) {
 //  myAddr = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
 //  if (!myAddr) {
 //    ERROR("Error allocating sockaddr variable");
@@ -20,6 +20,9 @@ Network::Network() {
   u_char ttl;
   struct ip_mreq mreq;
 
+  this->group = group;
+  this->port = port;
+  this->dropRate = dropRate;
   gethostname(buf, sizeof(buf));
   if ((thisHost = resolveHost(buf)) == (struct sockaddr_in *) NULL)
     ERROR("who am I?");
@@ -70,7 +73,6 @@ Network::Network() {
     ERROR("setsockopt failed (IP_ADD_MEMBERSHIP)");
   }
 
-
   /* Get the multi-cast address ready to use in SendData()
    calls. */
   memcpy(&myAddr, &nullAddr, sizeof(struct sockaddr_in));
@@ -79,6 +81,71 @@ Network::Network() {
 }
 
 Network::~Network() {
+}
+
+int Network::send(PacketBase* p) {
+
+  std::stringstream stream;
+  p->printPacket();
+  p->serialize(stream);  //p>>stream;
+  if (sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
+             (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in)) < 0) {
+    ERROR("send error");
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
+PacketBase * Network::receive() {
+  pollfd pf;
+  pf.fd = mySocket;
+  pf.events = POLLIN;
+  int rv = poll(&pf, 1, POLL_TIME_OUT);
+  if (rv == -1) {
+    ERROR("polling error\n");
+    return NULL;
+  } else if (rv == 0) {
+    DBG("polling timed out!");
+    return NULL;
+  } else {
+    if (pf.revents & POLLIN) {
+      char buf[1024];
+      sockaddr tmp;
+      unsigned int tmp_size = sizeof(tmp);
+      int ret = recvfrom(mySocket, buf, sizeof(buf), 0, &tmp, &tmp_size);
+      if (ret < 0) {
+        ERROR("recvfrom error!");
+        return NULL;
+      } else if (((unsigned int) rand() % 100) < dropRate) {
+        INFO("packet dropped!\n");
+        return NULL;
+      } else {
+
+        DBG("deserializing packet:\n");
+        PacketBase *p;
+        //populate the stream:
+        std::stringstream stream;
+        stream.write(buf, ret);
+        //de-serialize:
+        switch (buf[0]) {
+          case OPEN:
+
+            break;
+          default:
+            ERROR("wrong switch");
+            break;
+
+        }
+        return p;
+      }
+
+    }else{
+      ERROR("polling result error!\n");
+      return NULL;
+    }
+  }
+
 }
 
 /*
