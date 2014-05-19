@@ -44,6 +44,10 @@ class Network {
   struct sockaddr_in myAddr;
   struct sockaddr_in groupAddr;
   struct sockaddr_in* resolveHost(register char *);
+  std::map<uint32_t, int> mapSeqNum;  //mapping from machine id to that machine's seq number
+  bool outOfOrder(PacketBase* p);
+  void insertSeqNumber(PacketBase* p);
+
 };
 #endif /* NETWORKINSTANCE_H_ */
 

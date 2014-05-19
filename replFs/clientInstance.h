@@ -15,15 +15,13 @@ class ClientInstance {
  private:
   int fd;
   std::string fileName;
-  int port;
-  int dropRate;
   int numServers;
   uint32_t GUID;
+  uint32_t seqNum;
   int numPendingBlocks;
   std::map<int, int> mapSeqNum;  //mapping from machine id to that machine's seq number
   std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number
-  std::map<int, WriteBlockPkt*> mapPendingBlocks;  //mapping from block id to packet that contains the payload
-  std::map<int, WriteBlockPkt*>::iterator iterPendingBlocks;  //mapping from block id to packet that contains the payload
+  WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
   Network *N;
 
  public:

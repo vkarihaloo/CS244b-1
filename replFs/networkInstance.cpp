@@ -84,7 +84,7 @@ Network::~Network() {
 }
 
 int Network::send(PacketBase* p) {
-
+  insertSeqNumber(p);
   std::stringstream stream;
   p->printPacket();
   p->serialize(stream);  //p>>stream;
@@ -121,7 +121,6 @@ PacketBase * Network::receive() {
         INFO("packet dropped!\n");
         return NULL;
       } else {
-
         DBG("deserializing packet:\n");
         PacketBase *p;
         //populate the stream:
@@ -130,14 +129,55 @@ PacketBase * Network::receive() {
         //de-serialize:
         switch (buf[0]) {
           case OPEN:
-
+            p = new OpenPkt();
+            stream >> p;
+            break;
+          case OPEN_ACK:
+            p = new OpenAckPkt();
+            stream >> p;
+            break;
+          case WRITE_BLOCK:
+            p = new WriteBlockPkt();
+            stream >> p;
+            break;
+          case COMMIT_VOTING:
+            p = new CommitVotingPkt();
+            stream >> p;
+            break;
+          case COMMIT_VOTING_SUCCESS:
+            p = new CommitVotingSuccessPkt();
+            stream >> p;
+            break;
+          case COMMIT_VOTING_RESEND:
+            p = new CommitVotingResendPkt();
+            stream >> p;
+            break;
+          case COMMIT_FINAL:
+            p = new CommitFinalPkt();
+            stream >> p;
+            break;
+          case COMMIT_FINAL_REPLY:
+            p = new CommitFinalReplyPkt();
+            stream >> p;
+            break;
+          case ABORT:
+            p = new AbortPkt();
+            stream >> p;
+            break;
+          case CLOSE:
+            p = new ClosePkt();
+            stream >> p;
             break;
           default:
             ERROR("wrong switch");
             break;
 
         }
-        return p;
+        if (outOfOrder(p)) {
+          DBG("out of order packet, discard!");
+          return NULL;
+        } else
+          return p;
       }
 
     } else {
@@ -175,4 +215,29 @@ struct sockaddr_in * Network::resolveHost(register char *name) {
     return(NULL);
   }
   return (&sa);
+}
+
+bool Network::outOfOrder(PacketBase* p) {
+  if (mapSeqNum.count(p->GUID) != 0) {
+    if (mapSeqNum[p->GUID] > p->seqNum) {
+      return 1;
+    } else {
+      return 0;
+    }
+  } else {
+    mapSeqNum[p->GUID] = p->seqNum;
+    return 0;
+  }
+}
+
+}
+
+void Network::insertSeqNumber(PacketBase* p) {
+if (mapSeqNum.count(p->GUID) != 0) {
+  p->seqNum = (++mapSeqNum[p->GUID]);
+} else {
+  mapSeqNum[p->GUID] = 1;
+  p->seqNum = 1;
+}
+
 }
