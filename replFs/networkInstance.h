@@ -30,10 +30,10 @@
 
 class Network {
  public:
-  Network(int, int, int);
+  Network(int group, int port, int dropRate);
   virtual ~Network();
   int send(PacketBase *p);    //
-  PacketBase * receive(); //return the pointer to a packet
+  PacketBase * receive();  //return the pointer to a packet
 
   int group;
   int port;

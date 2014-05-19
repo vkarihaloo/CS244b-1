@@ -7,6 +7,7 @@
 
 #ifndef DEBUG_H_
 #define DEBUG_H_
+#include <assert.h>
 
 #define ERROR(...) \
 do{ \

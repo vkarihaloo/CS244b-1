@@ -140,7 +140,7 @@ PacketBase * Network::receive() {
         return p;
       }
 
-    }else{
+    } else {
       ERROR("polling result error!\n");
       return NULL;
     }

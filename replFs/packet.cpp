@@ -7,7 +7,7 @@
 #include "packet.h"
 
 PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID,
-                       uint32_t fd, uint32_t seqNum, uint32_t transNum) {
+                       int fd, uint32_t seqNum, uint32_t transNum) {
   this->type = type;
   this->nodeType = nodeType;
   this->checkSum = 0;
@@ -18,7 +18,7 @@ PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID,
   this->checkSum = cksum(this, sizeof(PacketBase));
 }
 
-OpenPkt::OpenPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
+OpenPkt::OpenPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
                  char* fileName)
     : PacketBase(OPEN, CLIENT, GUID, fd, seqNum, transNum) {
   int i;
@@ -28,13 +28,13 @@ OpenPkt::OpenPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
   fileName[i] = '\0';
 }
 
-OpenAckPkt::OpenAckPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+OpenAckPkt::OpenAckPkt(uint32_t GUID, int fd, uint32_t seqNum,
                        uint32_t transNum, bool status)
     : PacketBase(OPEN_ACK, SERVER, GUID, fd, seqNum, transNum) {
   this->status = status;
 }
 
-WriteBlockPkt::WriteBlockPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+WriteBlockPkt::WriteBlockPkt(uint32_t GUID, int fd, uint32_t seqNum,
                              uint32_t transNum, int blockID, int offset,
                              int size, uint8_t* payload)
     : PacketBase(WRITE_BLOCK, CLIENT, GUID, fd, seqNum, transNum) {
@@ -47,19 +47,19 @@ WriteBlockPkt::WriteBlockPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
 
 }
 
-CommitVotingPkt::CommitVotingPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+CommitVotingPkt::CommitVotingPkt(uint32_t GUID, int fd, uint32_t seqNum,
                                  uint32_t transNum, int totalPending)
     : PacketBase(COMMIT_VOTING, CLIENT, GUID, fd, seqNum, transNum) {
   this->totalPending = totalPending;
 }
 
-CommitVotingSuccessPkt::CommitVotingSuccessPkt(uint32_t GUID, uint32_t fd,
+CommitVotingSuccessPkt::CommitVotingSuccessPkt(uint32_t GUID, int fd,
                                                uint32_t seqNum,
                                                uint32_t transNum)
     : PacketBase(COMMIT_VOTING_SUCCESS, SERVER, GUID, fd, seqNum, transNum) {
 }
 
-CommitVotingResendPkt::CommitVotingResendPkt(uint32_t GUID, uint32_t fd,
+CommitVotingResendPkt::CommitVotingResendPkt(uint32_t GUID, int fd,
                                              uint32_t seqNum, uint32_t transNum,
                                              int totalMissing, int* MissingIDs)
     : PacketBase(COMMIT_VOTING_RESEND, SERVER, GUID, fd, seqNum, transNum) {
@@ -69,24 +69,24 @@ CommitVotingResendPkt::CommitVotingResendPkt(uint32_t GUID, uint32_t fd,
   }
 }
 
-CommitFinalPkt::CommitFinalPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+CommitFinalPkt::CommitFinalPkt(uint32_t GUID, int fd, uint32_t seqNum,
                                uint32_t transNum)
     : PacketBase(COMMIT_FINAL, CLIENT, GUID, fd, seqNum, transNum) {
 }
 
-CommitFinalReplyPkt::CommitFinalReplyPkt(uint32_t GUID, uint32_t fd,
+CommitFinalReplyPkt::CommitFinalReplyPkt(uint32_t GUID, int fd,
                                          uint32_t seqNum, uint32_t transNum,
                                          bool status)
     : PacketBase(COMMIT_FINAL_REPLY, SERVER, GUID, fd, seqNum, transNum) {
   this->status = status;
 }
 
-AbortPkt::AbortPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum,
                    uint32_t transNum)
     : PacketBase(ABORT, CLIENT, GUID, fd, seqNum, transNum) {
 }
 
-ClosePkt::ClosePkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+ClosePkt::ClosePkt(uint32_t GUID, int fd, uint32_t seqNum,
                    uint32_t transNum, int totalPending)
     : PacketBase(CLOSE, CLIENT, GUID, fd, seqNum, transNum) {
   this->totalPending = totalPending;

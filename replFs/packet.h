@@ -42,12 +42,12 @@ class PacketBase {
   uint8_t type;
   uint8_t nodeType;
   uint16_t checkSum;
-  int GUID;
+  uint32_t GUID;
   int fd;
-  int seqNum;
-  int transNum;
+  uint32_t seqNum;
+  uint32_t transNum;
 
-  PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID, uint32_t fd,
+  PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID, int fd,
              uint32_t seqNum, uint32_t transNum);
 
   PacketBase() {
@@ -68,7 +68,7 @@ class OpenPkt : public PacketBase {
  public:
   char fileName[MAX_FILE_NAME];
 
-  OpenPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
+  OpenPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
           char * fileName);
   OpenPkt() {
   }
@@ -83,7 +83,7 @@ class OpenAckPkt : public PacketBase {
  public:
   bool status;
 
-  OpenAckPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
+  OpenAckPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
              bool status);
   OpenAckPkt() {
   }
@@ -101,7 +101,7 @@ class WriteBlockPkt : public PacketBase {
   int size;
   uint8_t payload[MAX_PAY_LOAD];
 
-  WriteBlockPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
+  WriteBlockPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
                 int blockID, int offset, int size, uint8_t * payload);
   WriteBlockPkt() {
   }
@@ -116,7 +116,7 @@ class CommitVotingPkt : public PacketBase {
  public:
   int totalPending;
 
-  CommitVotingPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+  CommitVotingPkt(uint32_t GUID, int fd, uint32_t seqNum,
                   uint32_t transNum, int totalPending);
   CommitVotingPkt() {
   }
@@ -129,7 +129,7 @@ class CommitVotingPkt : public PacketBase {
 
 class CommitVotingSuccessPkt : public PacketBase {
  public:
-  CommitVotingSuccessPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+  CommitVotingSuccessPkt(uint32_t GUID, int fd, uint32_t seqNum,
                          uint32_t transNum);
   CommitVotingSuccessPkt() {
   }
@@ -145,7 +145,7 @@ class CommitVotingResendPkt : public PacketBase {
   int totalMissing;
   std::vector<int> vectorMissingID;
 //TODO:
-  CommitVotingResendPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+  CommitVotingResendPkt(uint32_t GUID, int fd, uint32_t seqNum,
                         uint32_t transNum, int totalMissing, int *MissingIDs);
   CommitVotingResendPkt() {
   }
@@ -158,7 +158,7 @@ class CommitVotingResendPkt : public PacketBase {
 
 class CommitFinalPkt : public PacketBase {
  public:
-  CommitFinalPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+  CommitFinalPkt(uint32_t GUID, int fd, uint32_t seqNum,
                  uint32_t transNum);
   CommitFinalPkt() {
   }
@@ -173,7 +173,7 @@ class CommitFinalReplyPkt : public PacketBase {
  public:
   bool status;
 
-  CommitFinalReplyPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum,
+  CommitFinalReplyPkt(uint32_t GUID, int fd, uint32_t seqNum,
                       uint32_t transNum, bool status);
   CommitFinalReplyPkt() {
   }
@@ -187,7 +187,7 @@ class CommitFinalReplyPkt : public PacketBase {
 class AbortPkt : public PacketBase {
  public:
 
-  AbortPkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum);
+  AbortPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum);
   AbortPkt() {
   }
   virtual ~AbortPkt() {
@@ -201,7 +201,7 @@ class ClosePkt : public PacketBase {
  public:
   int totalPending;
 
-  ClosePkt(uint32_t GUID, uint32_t fd, uint32_t seqNum, uint32_t transNum,
+  ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
            int totalPending);
   ClosePkt() {
   }

@@ -5,7 +5,6 @@
 /* Spring 2014  */
 /****************/
 
-
 #define DEBUG
 
 #include <stdio.h>
@@ -17,18 +16,16 @@
 #include <debug.h>
 #include <client.h>
 
+ClientInstance *C;
 /* ------------------------------------------------------------------ */
-
 int InitReplFs(unsigned short portNum, int packetLoss, int numServers) {
-#ifdef DEBUG
-  printf("InitReplFs: Port number %d, packet loss %d percent, %d servers\n",
-         portNum, packetLoss, numServers);
-#endif
+  DBG("InitReplFs: Port number %d, packet loss %d percent, %d servers\n",
+      portNum, packetLoss, numServers);
 
   /****************************************************/
   /* Initialize network access, local state, etc.     */
   /****************************************************/
-
+  C = new ClientInstance(portNum, packetLoss, numServers);
   return (NormalReturn);
 }
 
@@ -36,12 +33,9 @@ int InitReplFs(unsigned short portNum, int packetLoss, int numServers) {
 
 int OpenFile(char * fileName) {
   int fd;
-
-  ASSERT(fileName);
-
   DBG("OpenFile: Opening File '%s'\n", fileName);
-
-  fd = open(fileName, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+  ASSERT(fileName);
+  fd = C->OpenFile(fileName);
 
   if (fd < 0)
     perror("OpenFile error");
@@ -62,15 +56,10 @@ int WriteBlock(int fd, char * buffer, int byteOffset, int blockSize) {
   ASSERT(blockSize >= 0 && blockSize < MaxBlockLength);
   ASSERT(byteOffset + blockSize < MaxFileSize);
 
-  DBG("WriteBlock: Writing FD=%d, Offset in the file =%d, Length in the buffer to write=%d\n", fd, byteOffset,
-      blockSize);
+  DBG("WriteBlock: Writing FD=%d, Offset in the file =%d, Length in the buffer to write=%d\n",
+      fd, byteOffset, blockSize);
 
-  if (lseek(fd, byteOffset, SEEK_SET) < 0) {
-    perror("WriteBlock Seek");
-    return (ErrorReturn);
-  }
-
-  if ((bytesWritten = write(fd, buffer, blockSize)) < 0) {
+  if ((bytesWritten = C->WriteBlock(fd, buffer, byteOffset, blockSize)) < 0) {
     perror("WriteBlock write");
     return (ErrorReturn);
   }
@@ -82,20 +71,20 @@ int WriteBlock(int fd, char * buffer, int byteOffset, int blockSize) {
 int Commit(int fd) {
   ASSERT(fd >= 0);
 
-#ifdef DEBUG
-  printf("Commit: FD=%d\n", fd);
-#endif
-
+  DBG("Commit: FD=%d\n", fd);
+  int ret;
   /****************************************************/
   /* Prepare to Commit Phase			    */
   /* - Check that all writes made it to the server(s) */
   /****************************************************/
-
+  ret = C->CommitVoting(fd);
+  if (ret == ErrorReturn)
+    return ErrorReturn;
   /****************/
   /* Commit Phase */
   /****************/
-
-  return (NormalReturn);
+  ret = C->CommitFinal(fd);
+  return ret;
 
 }
 
@@ -104,31 +93,15 @@ int Commit(int fd) {
 int Abort(int fd) {
   ASSERT(fd >= 0);
 
-#ifdef DEBUG
-  printf("Abort: FD=%d\n", fd);
-#endif
+  DBG("Abort: FD=%d\n", fd);
 
   /*************************/
   /* Abort the transaction */
   /*************************/
+  int ret = C->Abort(fd);
 
-  return (NormalReturn);
-}
-
-/* ------------------------------------------------------------------ */
-
-int CloseFile(int fd) {
-
-  ASSERT(fd >= 0);
-
-  DBG("Close: FD=%d\n", fd);
-
-  /*****************************/
-  /* Check for Commit or Abort */
-  /*****************************/
-
-  if (close(fd) < 0) {
-    perror("Close");
+  if (ret < 0) {
+    ERROR("Close");
     return (ErrorReturn);
   }
 
@@ -137,3 +110,21 @@ int CloseFile(int fd) {
 
 /* ------------------------------------------------------------------ */
 
+int CloseFile(int fd) {
+  ASSERT(fd >= 0);
+
+  DBG("Close: FD=%d\n", fd);
+
+  /*****************************/
+  /* Check for Commit or Abort */
+  /*****************************/
+  int ret = C->CloseFile(fd);
+
+  if (ret < 0) {
+    ERROR("Close");
+    return (ErrorReturn);
+  }
+  return (NormalReturn);
+}
+
+/* ------------------------------------------------------------------ */
