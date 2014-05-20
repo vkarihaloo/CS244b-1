@@ -26,7 +26,7 @@ class ClientInstance {
 
  public:
   ClientInstance();
-  ClientInstance(int port, int dropRate, int numServers);
+  ClientInstance(unsigned short port, int dropRate, int numServers);
   virtual ~ClientInstance();
   int OpenFile(char* fileName);
   int WriteBlock(int fd, char * strData, int byteOffset, int blockSize);

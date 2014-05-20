@@ -32,17 +32,16 @@
 
 class Network {
  public:
-  Network(int group, int port, int dropRate);
+  Network(int group, unsigned short port, int dropRate);
   virtual ~Network();
   int send(PacketBase *p);    //
   PacketBase * receive();  //return the pointer to a packet
 
-  int port;
   int dropRate;
 
  private:
   int mySocket;
-  struct sockaddr_in myAddr;
+//  struct sockaddr_in myAddr;
   struct sockaddr_in groupAddr;
   struct sockaddr_in* resolveHost(register char *);
   std::map<uint32_t, uint32_t> mapSeqNum;  //mapping from machine id to that machine's seq number

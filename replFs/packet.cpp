@@ -280,7 +280,7 @@ void PacketBase::printPacket() {
  std::string typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
       "COMMIT_VOTING_SUCCESS", "COMMIT_VOTING_RESEND", "COMMIT_FINAL",
       "COMMIT_FINAL_REPLY", "ABORT", "CLOSE" };
-  DBG("\n type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d\n",
+  DBG("\nPrint Packet: type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d | ",
       typeStr[type].c_str(), nodeType, GUID, fd, seqNum, transNum);
 }
 
@@ -296,7 +296,7 @@ void OpenAckPkt::printPacket() {
 
 void WriteBlockPkt::printPacket() {
   PacketBase::printPacket();
-  DBG("blockID=%d, offset=%d, size=%d \n payload= ", blockID, offset, size);
+  DBG("blockID=%d, offset=%d, size=%d \n    ====== payload= ", blockID, offset, size);
   for (int i = 0; i < size; i++) {
     DBG("%c ", payload[i]);
   }DBG("\n");
@@ -304,11 +304,12 @@ void WriteBlockPkt::printPacket() {
 
 void CommitVotingPkt::printPacket() {
   PacketBase::printPacket();
-  DBG("%d", totalPending);
+  DBG("%d\n", totalPending);
 }
 
 void CommitVotingSuccessPkt::printPacket() {
   PacketBase::printPacket();
+  DBG("\n");
 }
 
 void CommitVotingResendPkt::printPacket() {
@@ -321,6 +322,7 @@ void CommitVotingResendPkt::printPacket() {
 
 void CommitFinalPkt::printPacket() {
   PacketBase::printPacket();
+  DBG("\n");
 }
 
 void CommitFinalReplyPkt::printPacket() {
@@ -330,6 +332,7 @@ void CommitFinalReplyPkt::printPacket() {
 
 void AbortPkt::printPacket() {
   PacketBase::printPacket();
+  DBG("\n");
 }
 
 void ClosePkt::printPacket() {

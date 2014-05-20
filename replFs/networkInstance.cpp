@@ -7,7 +7,7 @@
 
 #include "networkInstance.h"
 
-Network::Network(int group, int port, int dropRate) {
+Network::Network(int group, unsigned short port, int dropRate) {
 //  myAddr = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
 //  if (!myAddr) {
 //    ERROR("Error allocating sockaddr variable");
@@ -20,7 +20,6 @@ Network::Network(int group, int port, int dropRate) {
   u_char ttl;
   struct ip_mreq mreq;
 
-  this->port = port;
   this->dropRate = dropRate;
 //  gethostname(buf, sizeof(buf));
 //  if ((thisHost = resolveHost(buf)) == (struct sockaddr_in *) NULL)
@@ -43,6 +42,7 @@ Network::Network(int group, int port, int dropRate) {
   nullAddr.sin_family = AF_INET;
   nullAddr.sin_addr.s_addr = htonl(INADDR_ANY);
   nullAddr.sin_port = htons(port);
+  DBG("on init, it port = %d, group =%x\n", htons(port), group);
   if (bind(mySocket, (struct sockaddr *) &nullAddr, sizeof(nullAddr)) < 0)
     ERROR("netInit binding");
 
@@ -74,8 +74,9 @@ Network::Network(int group, int port, int dropRate) {
 
   /* Get the multi-cast address ready to use in SendData()
    calls. */
-  memcpy(&myAddr, &nullAddr, sizeof(struct sockaddr_in));
+  memcpy(&groupAddr, &nullAddr, sizeof(struct sockaddr_in));
   groupAddr.sin_addr.s_addr = htonl(group);
+  DBG("\n\n port = %d \n", groupAddr.sin_port);
 
 }
 
@@ -91,7 +92,8 @@ int Network::send(PacketBase* p) {
   int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
                    (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in));
   if (ret < 0) {
-    ERROR("send error = %d\n", ret);
+    ERROR("send error = %d, port=%u, group=%x\n", ret, groupAddr.sin_port, groupAddr.sin_addr.s_addr);
+
     return -1;
   } else {
     return 0;
@@ -122,7 +124,7 @@ PacketBase * Network::receive() {
         INFO("packet dropped!\n");
         return NULL;
       } else {
-        DBG("deserializing packet:\n");
+        DBG("\ndeserializing packet:\n");
         PacketBase *p;
         //populate the stream:
         std::stringstream stream;

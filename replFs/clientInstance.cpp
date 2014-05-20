@@ -11,7 +11,7 @@ ClientInstance::ClientInstance() {
 
 }
 
-ClientInstance::ClientInstance(int port, int dropRate, int numServers) {
+ClientInstance::ClientInstance(unsigned short port, int dropRate, int numServers) {
   this->fileName = "";
   this->numServers = numServers;
   this->fd = 0;
