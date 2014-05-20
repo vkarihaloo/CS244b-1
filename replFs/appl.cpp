@@ -28,7 +28,7 @@ int main() {
   /* Initialize the system     */
   /*****************************/
 
-  if (InitReplFs(ReplFsPort, 0, 0) < 0) {
+  if (InitReplFs(ReplFsPort, 0, 1) < 0) {
     fprintf( stderr, "Error initializing the system\n");
     return (ErrorExit);
   }
@@ -51,13 +51,13 @@ int main() {
     sprintf(strData, "%d\n", loopCnt);
 
 #ifdef DEBUG
-    printf("%d: Writing '%s' to file.\n", loopCnt, strData);
+//    printf("%d: Writing '%s' to file.\n", loopCnt, strData);
 #endif
 
-    if (WriteBlock(fd, strData, byteOffset, strlen(strData)) < 0) {
-      printf("Error writing to file %s [LoopCnt=%d]\n", fileName, loopCnt);
-      return (ErrorExit);
-    }
+//    if (WriteBlock(fd, strData, byteOffset, strlen(strData)) < 0) {
+//      printf("Error writing to file %s [LoopCnt=%d]\n", fileName, loopCnt);
+//      return (ErrorExit);
+//    }
     byteOffset += strlen(strData);
 
   }

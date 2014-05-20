@@ -8,11 +8,13 @@
 #ifndef PACKET_H_
 #define PACKET_H_
 
-#include <string>
+#include <string.h>
+#include <arpa/inet.h>
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <stdint.h>
+#include <stdlib.h>
 #include "debug.h"
 
 #define MAX_FILE_NAME 128
@@ -72,8 +74,8 @@ class OpenPkt : public PacketBase {
           char * fileName);
   OpenPkt() {
   }
-  virtual ~OpenPkt() {
-  }
+//  virtual ~OpenPkt() {
+//  }
   virtual void serialize(std::ostream& stream) const;   //upload it to stream
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
   virtual void printPacket();
@@ -116,8 +118,8 @@ class CommitVotingPkt : public PacketBase {
  public:
   int totalPending;
 
-  CommitVotingPkt(uint32_t GUID, int fd, uint32_t seqNum,
-                  uint32_t transNum, int totalPending);
+  CommitVotingPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
+                  int totalPending);
   CommitVotingPkt() {
   }
   virtual ~CommitVotingPkt() {
@@ -158,8 +160,7 @@ class CommitVotingResendPkt : public PacketBase {
 
 class CommitFinalPkt : public PacketBase {
  public:
-  CommitFinalPkt(uint32_t GUID, int fd, uint32_t seqNum,
-                 uint32_t transNum);
+  CommitFinalPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum);
   CommitFinalPkt() {
   }
   virtual ~CommitFinalPkt() {
@@ -173,8 +174,8 @@ class CommitFinalReplyPkt : public PacketBase {
  public:
   bool status;
 
-  CommitFinalReplyPkt(uint32_t GUID, int fd, uint32_t seqNum,
-                      uint32_t transNum, bool status);
+  CommitFinalReplyPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
+                      bool status);
   CommitFinalReplyPkt() {
   }
   virtual ~CommitFinalReplyPkt() {
@@ -214,9 +215,9 @@ class ClosePkt : public PacketBase {
 
 //overloaded << and >> for serialization and de-serialization. Since all serialization methods are
 //virtual, this supports polymorphism and dynamic dispatch
-std::istream& operator>>(std::istream &stream, PacketBase &packet);
+std::istream& operator>>(std::istream &stream, PacketBase *packet);
 
-std::ostream& operator<<(std::ostream &stream, const PacketBase &packet);
+std::ostream& operator<<(std::ostream &stream, const PacketBase *packet);
 
 #endif /* PACKET_H_ */
 

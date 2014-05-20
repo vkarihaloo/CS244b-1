@@ -6,16 +6,11 @@
  */
 #include "serverInstance.h"
 
-int main(int argc, char **argv) {
-
-  return 0;
-}
-
 ServerInstance::ServerInstance() {
 
 }
 
-ServerInstance::ServerInstance(int port, int mount, int dropRate) {
+ServerInstance::ServerInstance(int port, std::string mount, int dropRate) {
   N = new Network(GROUP, port, dropRate);
   this->mount = mount;
   this->fullPath = "";
@@ -60,7 +55,8 @@ void ServerInstance::run() {
     if (p == NULL) {
       continue;
     } else {
-      if (p->nodeType == SERVER || outOfOrder(p)) {
+      DBG("server received a packet!\n");
+      if (p->nodeType == SERVER ) {
         continue;
       } else {
         switch (p->type){
@@ -83,16 +79,4 @@ void ServerInstance::run() {
 
 }
 
-bool ServerInstance::outOfOrder(PacketBase* p) {
-  if (mapSeqNum.count(p->GUID) != 0) {
-    if (mapSeqNum[p->GUID] > p->seqNum) {
-      return 1;
-    } else {
-      return 0;
-    }
-  } else {
-    mapSeqNum[p->GUID] = p->seqNum;
-    return 0;
-  }
-}
 

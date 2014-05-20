@@ -6,8 +6,8 @@
  */
 #include "packet.h"
 
-PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID,
-                       int fd, uint32_t seqNum, uint32_t transNum) {
+PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID, int fd,
+                       uint32_t seqNum, uint32_t transNum) {
   this->type = type;
   this->nodeType = nodeType;
   this->checkSum = 0;
@@ -21,7 +21,7 @@ PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID,
 OpenPkt::OpenPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
                  char* fileName)
     : PacketBase(OPEN, CLIENT, GUID, fd, seqNum, transNum) {
-  int i;
+  unsigned int i;
   for (i = 0; i < strlen(fileName) && i < MAX_FILE_NAME - 1; i++) {
     this->fileName[i] = fileName[i];
   }
@@ -74,37 +74,35 @@ CommitFinalPkt::CommitFinalPkt(uint32_t GUID, int fd, uint32_t seqNum,
     : PacketBase(COMMIT_FINAL, CLIENT, GUID, fd, seqNum, transNum) {
 }
 
-CommitFinalReplyPkt::CommitFinalReplyPkt(uint32_t GUID, int fd,
-                                         uint32_t seqNum, uint32_t transNum,
-                                         bool status)
+CommitFinalReplyPkt::CommitFinalReplyPkt(uint32_t GUID, int fd, uint32_t seqNum,
+                                         uint32_t transNum, bool status)
     : PacketBase(COMMIT_FINAL_REPLY, SERVER, GUID, fd, seqNum, transNum) {
   this->status = status;
 }
 
-AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum,
-                   uint32_t transNum)
+AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum)
     : PacketBase(ABORT, CLIENT, GUID, fd, seqNum, transNum) {
 }
 
-ClosePkt::ClosePkt(uint32_t GUID, int fd, uint32_t seqNum,
-                   uint32_t transNum, int totalPending)
+ClosePkt::ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
+                   int totalPending)
     : PacketBase(CLOSE, CLIENT, GUID, fd, seqNum, transNum) {
   this->totalPending = totalPending;
 }
 
 void PacketBase::serialize(std::ostream& stream) const {
-  checkSum = htons(checkSum);
-  GUID = htonl(GUID);
-  fd = htonl(fd);
-  seqNum = htonl(seqNum);
-  transNum = htonl(transNum);
+  uint16_t checkSum1 = htons(checkSum);
+  uint32_t GUID1 = htonl(GUID);
+  int fd1 = htonl(fd);
+  uint32_t seqNum1 = htonl(seqNum);
+  uint32_t transNum1 = htonl(transNum);
   stream.write(reinterpret_cast<const char *>(&type), sizeof(type));
   stream.write(reinterpret_cast<const char *>(&nodeType), sizeof(nodeType));
-  stream.write(reinterpret_cast<const char *>(&checkSum), sizeof(checkSum));
-  stream.write(reinterpret_cast<const char *>(&GUID), sizeof(GUID));
-  stream.write(reinterpret_cast<const char *>(&fd), sizeof(fd));
-  stream.write(reinterpret_cast<const char *>(&seqNum), sizeof(seqNum));
-  stream.write(reinterpret_cast<const char *>(&transNum), sizeof(transNum));
+  stream.write(reinterpret_cast<const char *>(&checkSum1), sizeof(checkSum));
+  stream.write(reinterpret_cast<const char *>(&GUID1), sizeof(GUID));
+  stream.write(reinterpret_cast<const char *>(&fd1), sizeof(fd));
+  stream.write(reinterpret_cast<const char *>(&seqNum1), sizeof(seqNum));
+  stream.write(reinterpret_cast<const char *>(&transNum1), sizeof(transNum));
 }
 
 void PacketBase::deserialize(std::istream& stream) {
@@ -148,12 +146,12 @@ void OpenAckPkt::deserialize(std::istream& stream) {
 
 void WriteBlockPkt::serialize(std::ostream& stream) const {
   PacketBase::serialize(stream);
-  blockID = htonl(blockID);
-  offset = htonl(offset);
-  size = htonl(size);
-  stream.write(reinterpret_cast<const char *>(&blockID), sizeof(blockID));
-  stream.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
-  stream.write(reinterpret_cast<const char *>(&size), sizeof(size));
+  int blockID1 = htonl(blockID);
+  int offset1 = htonl(offset);
+  int size1 = htonl(size);
+  stream.write(reinterpret_cast<const char *>(&blockID1), sizeof(blockID));
+  stream.write(reinterpret_cast<const char *>(&offset1), sizeof(offset));
+  stream.write(reinterpret_cast<const char *>(&size1), sizeof(size));
   stream.write(reinterpret_cast<const char *>(&payload),
                size * sizeof(uint8_t));
 }
@@ -171,8 +169,8 @@ void WriteBlockPkt::deserialize(std::istream& stream) {
 
 void CommitVotingPkt::serialize(std::ostream& stream) const {
   PacketBase::serialize(stream);
-  totalPending = htonl(totalPending);
-  stream.write(reinterpret_cast<const char *>(&totalPending),
+  int totalPending1 = htonl(totalPending);
+  stream.write(reinterpret_cast<const char *>(&totalPending1),
                sizeof(totalPending));
 }
 
@@ -192,13 +190,12 @@ void CommitVotingSuccessPkt::deserialize(std::istream& stream) {
 
 void CommitVotingResendPkt::serialize(std::ostream& stream) const {
   PacketBase::serialize(stream);
-  totalMissing = htonl(totalMissing);
-  stream.write(reinterpret_cast<const char *>(&totalMissing),
+  int totalMissing1 = htonl(totalMissing);
+  stream.write(reinterpret_cast<const char *>(&totalMissing1),
                sizeof(totalMissing));
   for (int i = 0; i < totalMissing; i++) {
-    vectorMissingID[i] = htonl(vectorMissingID[i]);
-    stream.write(reinterpret_cast<const char *>(&vectorMissingID[i]),
-                 sizeof(int));
+    int missingID = htonl(vectorMissingID[i]);
+    stream.write(reinterpret_cast<const char *>(&missingID), sizeof(int));
   }
 }
 
@@ -251,13 +248,13 @@ void ClosePkt::deserialize(std::istream& stream) {
   stream.read(reinterpret_cast<char *>(&totalPending), sizeof(totalPending));
 }
 
-std::istream& operator>>(std::istream &stream, PacketBase &packet) {
-  packet.deserialize(stream);
+std::istream& operator>>(std::istream &stream, PacketBase *packet) {
+  packet->deserialize(stream);
   return stream;
 }
 
-std::ostream& operator<<(std::ostream &stream, const PacketBase &packet) {
-  packet.serialize(stream);
+std::ostream& operator<<(std::ostream &stream, const PacketBase *packet) {
+  packet->serialize(stream);
   return stream;
 }
 
@@ -280,11 +277,11 @@ bool PacketBase::checkSumCorrect() {
 }
 
 void PacketBase::printPacket() {
-  char *typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
+ std::string typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
       "COMMIT_VOTING_SUCCESS", "COMMIT_VOTING_RESEND", "COMMIT_FINAL",
       "COMMIT_FINAL_REPLY", "ABORT", "CLOSE" };
   DBG("\n type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d\n",
-      typeStr[type], nodeType, GUID, fd, seqNum, transNum);
+      typeStr[type].c_str(), nodeType, GUID, fd, seqNum, transNum);
 }
 
 void OpenPkt::printPacket() {
@@ -337,6 +334,6 @@ void AbortPkt::printPacket() {
 
 void ClosePkt::printPacket() {
   PacketBase::printPacket();
-  DBG("totalPending=%d\n, totalPending");
+  DBG("totalPending=%d\n", totalPending);
 }
 

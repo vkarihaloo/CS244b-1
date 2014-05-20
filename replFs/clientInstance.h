@@ -30,11 +30,11 @@ class ClientInstance {
   virtual ~ClientInstance();
   int OpenFile(char* fileName);
   int WriteBlock(int fd, char * strData, int byteOffset, int blockSize);
+  int CommitVoting(int fd);
+  int CommitFinal(int fd);
   int Abort(int fd);
   int CloseFile(int fd);
 
-  int CommitVoting(int fd);
-  int CommitFinal(int fd);
 
 };
 #endif /* CLIENTINSTANCE_H_ */

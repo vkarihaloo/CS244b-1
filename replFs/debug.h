@@ -8,6 +8,11 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 #include <assert.h>
+#include <stdio.h>
+
+
+//switch here:
+#define DEBUG
 
 #define ERROR(...) \
 do{ \

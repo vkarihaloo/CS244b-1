@@ -14,19 +14,18 @@ Network::Network(int group, int port, int dropRate) {
 //  }
 
   struct sockaddr_in nullAddr;
-  struct sockaddr_in *thisHost;
-  char buf[128];
+//  struct sockaddr_in *thisHost;
+//  char buf[128];
   int reuse;
   u_char ttl;
   struct ip_mreq mreq;
 
-  this->group = group;
   this->port = port;
   this->dropRate = dropRate;
-  gethostname(buf, sizeof(buf));
-  if ((thisHost = resolveHost(buf)) == (struct sockaddr_in *) NULL)
-    ERROR("who am I?");
-  bcopy((caddr_t) thisHost, (caddr_t) (&myAddr), sizeof(struct sockaddr_in));
+//  gethostname(buf, sizeof(buf));
+//  if ((thisHost = resolveHost(buf)) == (struct sockaddr_in *) NULL)
+//    ERROR("who am I?");
+//  bcopy((caddr_t) thisHost, (caddr_t) (&myAddr), sizeof(struct sockaddr_in));
 
   mySocket = socket(AF_INET, SOCK_DGRAM, 0);
   if (mySocket < 0)
@@ -43,7 +42,7 @@ Network::Network(int group, int port, int dropRate) {
 
   nullAddr.sin_family = AF_INET;
   nullAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  nullAddr.sin_port = PORT;
+  nullAddr.sin_port = htons(port);
   if (bind(mySocket, (struct sockaddr *) &nullAddr, sizeof(nullAddr)) < 0)
     ERROR("netInit binding");
 
@@ -66,7 +65,7 @@ Network::Network(int group, int port, int dropRate) {
   }
 
   /* join the multicast group */
-  mreq.imr_multiaddr.s_addr = htonl(GROUP);
+  mreq.imr_multiaddr.s_addr = htonl(group);
   mreq.imr_interface.s_addr = htonl(INADDR_ANY);
   if (setsockopt(mySocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *) &mreq,
                  sizeof(mreq)) < 0) {
@@ -76,7 +75,7 @@ Network::Network(int group, int port, int dropRate) {
   /* Get the multi-cast address ready to use in SendData()
    calls. */
   memcpy(&myAddr, &nullAddr, sizeof(struct sockaddr_in));
-  groupAddr.sin_addr.s_addr = htonl(GROUP);
+  groupAddr.sin_addr.s_addr = htonl(group);
 
 }
 
@@ -88,9 +87,11 @@ int Network::send(PacketBase* p) {
   std::stringstream stream;
   p->printPacket();
   p->serialize(stream);  //p>>stream;
-  if (sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
-             (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in)) < 0) {
-    ERROR("send error");
+  DBG(" stream.str().length()=%d\n", stream.str().length());
+  int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
+                   (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in));
+  if (ret < 0) {
+    ERROR("send error = %d\n", ret);
     return -1;
   } else {
     return 0;
@@ -130,43 +131,53 @@ PacketBase * Network::receive() {
         switch (buf[0]) {
           case OPEN:
             p = new OpenPkt();
-            stream >> p;
+            // stream >> p;
+            p->deserialize(stream);
             break;
           case OPEN_ACK:
             p = new OpenAckPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case WRITE_BLOCK:
             p = new WriteBlockPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case COMMIT_VOTING:
             p = new CommitVotingPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case COMMIT_VOTING_SUCCESS:
             p = new CommitVotingSuccessPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case COMMIT_VOTING_RESEND:
             p = new CommitVotingResendPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case COMMIT_FINAL:
             p = new CommitFinalPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case COMMIT_FINAL_REPLY:
             p = new CommitFinalReplyPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case ABORT:
             p = new AbortPkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           case CLOSE:
             p = new ClosePkt();
-            stream >> p;
+            p->deserialize(stream);
+            // stream >> p;
             break;
           default:
             ERROR("wrong switch");
@@ -230,14 +241,12 @@ bool Network::outOfOrder(PacketBase* p) {
   }
 }
 
-}
-
 void Network::insertSeqNumber(PacketBase* p) {
-if (mapSeqNum.count(p->GUID) != 0) {
-  p->seqNum = (++mapSeqNum[p->GUID]);
-} else {
-  mapSeqNum[p->GUID] = 1;
-  p->seqNum = 1;
-}
+  if (mapSeqNum.count(p->GUID) != 0) {
+    p->seqNum = (++mapSeqNum[p->GUID]);
+  } else {
+    mapSeqNum[p->GUID] = 1;
+    p->seqNum = 1;
+  }
 
 }

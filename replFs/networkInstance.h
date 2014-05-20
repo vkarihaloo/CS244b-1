@@ -23,7 +23,9 @@
 #include <sys/time.h>
 #include <poll.h>
 
-#define PORT 44024
+#include <map>
+
+//#define PORT 44024
 #define GROUP 0xe0010101
 
 #define POLL_TIME_OUT 500
@@ -35,7 +37,6 @@ class Network {
   int send(PacketBase *p);    //
   PacketBase * receive();  //return the pointer to a packet
 
-  int group;
   int port;
   int dropRate;
 
@@ -44,7 +45,7 @@ class Network {
   struct sockaddr_in myAddr;
   struct sockaddr_in groupAddr;
   struct sockaddr_in* resolveHost(register char *);
-  std::map<uint32_t, int> mapSeqNum;  //mapping from machine id to that machine's seq number
+  std::map<uint32_t, uint32_t> mapSeqNum;  //mapping from machine id to that machine's seq number
   bool outOfOrder(PacketBase* p);
   void insertSeqNumber(PacketBase* p);
 

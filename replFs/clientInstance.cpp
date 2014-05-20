@@ -20,6 +20,7 @@ ClientInstance::ClientInstance(int port, int dropRate, int numServers) {
   this->seqNum = 0;
   this->numPendingBlocks = 0;
   N = new Network(GROUP, port, dropRate);
+  INFO("init clientIntance done\n");
 }
 
 ClientInstance::~ClientInstance() {
@@ -31,8 +32,13 @@ ClientInstance::~ClientInstance() {
 }
 
 int ClientInstance::OpenFile(char* fileName) {
-  fd++; seqNum++
-  OpenPkt *p = new OpenPkt(GUID, fd, )
+  fd++;
+  OpenPkt *p = new OpenPkt((uint32_t)GUID, fd, (uint32_t)0, (uint32_t)0, fileName);
+  N->send(p);
+  N->send(p);
+  N->send(p);
+  DBG("send a packet!");
+  return 0;
 }
 
 int ClientInstance::WriteBlock(int fd, char* strData, int byteOffset,
