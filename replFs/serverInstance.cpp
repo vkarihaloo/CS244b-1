@@ -31,21 +31,29 @@ ServerInstance::~ServerInstance() {
 
 void ServerInstance::processOpen(PacketBase* p) {
   p->printPacket();
+  isOpened = true;
 }
 
 void ServerInstance::processWriteBlock(PacketBase* p) {
+  p->printPacket();
+  if (p->fd != fd)
+
 }
 
 void ServerInstance::processCommitVoting(PacketBase* p) {
+  p->printPacket();
 }
 
 void ServerInstance::processCommitFinal(PacketBase* p) {
+  p->printPacket();
 }
 
 void ServerInstance::processAbort(PacketBase* p) {
+  p->printPacket();
 }
 
 void ServerInstance::processClose(PacketBase* p) {
+  p->printPacket();
 }
 
 void ServerInstance::run() {

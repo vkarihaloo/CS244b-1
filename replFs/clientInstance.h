@@ -9,6 +9,7 @@
 #define CLIENTINSTANCE_H_
 #include "networkInstance.h"
 #include <map>
+#include <set>
 #include <string>
 
 class ClientInstance {
@@ -23,6 +24,7 @@ class ClientInstance {
   std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number
   WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
   Network *N;
+  bool isOpened;
 
  public:
   ClientInstance();
@@ -34,8 +36,10 @@ class ClientInstance {
   int CommitFinal(int fd);
   int Abort(int fd);
   int CloseFile(int fd);
-
-
+ private:
+  bool isTimeOut(timeval oldTime, long timeOut);
+  int collectResponse(PacketBase *p);
+  bool mismatch(PacketBase *ps, PacketBase *pr);
 };
 #endif /* CLIENTINSTANCE_H_ */
 

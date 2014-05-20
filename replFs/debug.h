@@ -28,7 +28,7 @@ do{ \
 
 #define INFO(...) \
 do{ \
-    fprintf(stdout, "[INFO  ]%s %s(Line %d): ",__FILE__,__FUNCTION__,__LINE__); \
+    fprintf(stdout, "[ ===INFO===  ]%s %s(Line %d): ",__FILE__,__FUNCTION__,__LINE__); \
     fprintf(stdout, __VA_ARGS__); \
 }while(0)
 

@@ -28,7 +28,11 @@
 //#define PORT 44024
 #define GROUP 0xe0010101
 
-#define POLL_TIME_OUT 500
+#define POLL_TIME_OUT 100
+#define RESEND_INTERVAL 200
+#define COLLECT_RESPONSE_TIME_OUT 5000
+
+
 
 class Network {
  public:
