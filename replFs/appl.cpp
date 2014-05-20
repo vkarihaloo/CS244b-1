@@ -51,13 +51,13 @@ int main() {
     sprintf(strData, "%d\n", loopCnt);
 
 #ifdef DEBUG
-//    printf("%d: Writing '%s' to file.\n", loopCnt, strData);
+    printf("%d: Writing '%s' to file.\n", loopCnt, strData);
 #endif
 
-//    if (WriteBlock(fd, strData, byteOffset, strlen(strData)) < 0) {
-//      printf("Error writing to file %s [LoopCnt=%d]\n", fileName, loopCnt);
-//      return (ErrorExit);
-//    }
+    if (WriteBlock(fd, strData, byteOffset, strlen(strData)) < 0) {
+      printf("Error writing to file %s [LoopCnt=%d]\n", fileName, loopCnt);
+      return (ErrorExit);
+    }
     byteOffset += strlen(strData);
 
   }

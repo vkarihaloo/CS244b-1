@@ -298,7 +298,7 @@ void WriteBlockPkt::printPacket() {
   PacketBase::printPacket();
   DBG("blockID=%d, offset=%d, size=%d \n    ====== payload= ", blockID, offset, size);
   for (int i = 0; i < size; i++) {
-    DBG("%c ", payload[i]);
+    DBG("%c", payload[i]);
   }DBG("\n");
 }
 
@@ -316,7 +316,7 @@ void CommitVotingResendPkt::printPacket() {
   PacketBase::printPacket();
   DBG("totalMissing=%d \n missingID= ", totalMissing);
   for (int i = 0; i < totalMissing; i++) {
-    DBG("%c ", vectorMissingID[i]);
+    DBG("%c", vectorMissingID[i]);
   }DBG("\n");
 }
 

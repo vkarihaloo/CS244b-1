@@ -86,7 +86,6 @@ Network::~Network() {
 int Network::send(PacketBase* p) {
   insertSeqNumber(p);
   std::stringstream stream;
-  p->printPacket();
   p->serialize(stream);  //p>>stream;
   DBG(" stream.str().length()=%d\n", stream.str().length());
   int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,

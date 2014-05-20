@@ -19,6 +19,8 @@ class ClientInstance {
   int numServers;
   uint32_t GUID;
   uint32_t seqNum;
+  uint32_t transNum;
+  uint32_t blockID;
   int numPendingBlocks;
   std::map<int, int> mapSeqNum;  //mapping from machine id to that machine's seq number
   std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number

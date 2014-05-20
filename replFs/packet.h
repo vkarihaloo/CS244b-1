@@ -20,6 +20,7 @@
 #define MAX_FILE_NAME 128
 #define MAX_PAY_LOAD 512
 #define MAX_PENDING 128
+#define MAX_FILE_SIZE (1<<20)
 
 enum PacketType {
   OPEN,
