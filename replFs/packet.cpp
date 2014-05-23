@@ -280,7 +280,7 @@ void PacketBase::printPacket() {
  std::string typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
       "COMMIT_VOTING_SUCCESS", "COMMIT_VOTING_RESEND", "COMMIT_FINAL",
       "COMMIT_FINAL_REPLY", "ABORT", "CLOSE" };
-  DBG("\nPrint Packet: type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d | ",
+  DBG(" type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d | ",
       typeStr[type].c_str(), nodeType, GUID, fd, seqNum, transNum);
 }
 
@@ -316,7 +316,7 @@ void CommitVotingResendPkt::printPacket() {
   PacketBase::printPacket();
   DBG("totalMissing=%d \n missingID= ", totalMissing);
   for (int i = 0; i < totalMissing; i++) {
-    DBG("%c", vectorMissingID[i]);
+    DBG("%d ", vectorMissingID[i]);
   }DBG("\n");
 }
 

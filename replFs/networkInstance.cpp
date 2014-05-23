@@ -7,7 +7,7 @@
 
 #include "networkInstance.h"
 
-Network::Network(int group, unsigned short port, int dropRate) {
+Network::Network(int group, unsigned short port, int dropRate, int nodeType) {
 //  myAddr = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
 //  if (!myAddr) {
 //    ERROR("Error allocating sockaddr variable");
@@ -21,6 +21,7 @@ Network::Network(int group, unsigned short port, int dropRate) {
   struct ip_mreq mreq;
 
   this->dropRate = dropRate;
+  this->nodeType = nodeType;
 //  gethostname(buf, sizeof(buf));
 //  if ((thisHost = resolveHost(buf)) == (struct sockaddr_in *) NULL)
 //    ERROR("who am I?");
@@ -87,11 +88,13 @@ int Network::send(PacketBase* p) {
   insertSeqNumber(p);
   std::stringstream stream;
   p->serialize(stream);  //p>>stream;
-  DBG(" stream.str().length()=%d\n", stream.str().length());
+  DBG("\nsending packet\n");
+  p->printPacket();
   int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
                    (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in));
   if (ret < 0) {
-    ERROR("send error = %d, port=%u, group=%x\n", ret, groupAddr.sin_port, groupAddr.sin_addr.s_addr);
+    ERROR("send error = %d, port=%u, group=%x\n", ret, groupAddr.sin_port,
+          groupAddr.sin_addr.s_addr);
 
     return -1;
   } else {
@@ -103,6 +106,7 @@ PacketBase * Network::receive() {
   pollfd pf;
   pf.fd = mySocket;
   pf.events = POLLIN;
+  unsigned int randNum = rand() % 100;
   int rv = poll(&pf, 1, POLL_TIME_OUT);
   if (rv == -1) {
     ERROR("polling error\n");
@@ -119,11 +123,11 @@ PacketBase * Network::receive() {
       if (ret < 0) {
         ERROR("recvfrom error!");
         return NULL;
-      } else if (((unsigned int) rand() % 100) < dropRate) {
-        INFO("packet dropped!\n");
+      } else if (randNum < dropRate) {
+        INFO("\npacket dropped!\n\n");
         return NULL;
       } else {
-        DBG("\ndeserializing packet:\n");
+//        DBG("\ndeserializing packet:\n");
         PacketBase *p;
         //populate the stream:
         std::stringstream stream;
@@ -186,7 +190,7 @@ PacketBase * Network::receive() {
 
         }
         if (outOfOrder(p)) {
-          DBG("out of order packet, discard!");
+
           return NULL;
         } else
           return p;
@@ -230,8 +234,13 @@ struct sockaddr_in * Network::resolveHost(register char *name) {
 }
 
 bool Network::outOfOrder(PacketBase* p) {
+  if (p->nodeType == nodeType)
+    return 1;
   if (mapSeqNum.count(p->GUID) != 0) {
     if (mapSeqNum[p->GUID] > p->seqNum) {
+      DBG("out of order packet, discard!\n");
+      DBG("last GUID=%d, this GUID=%d\n", mapSeqNum[p->GUID], p->seqNum);
+      p->printPacket();
       return 1;
     } else {
       return 0;

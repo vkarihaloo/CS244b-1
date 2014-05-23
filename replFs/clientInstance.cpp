@@ -22,8 +22,7 @@ ClientInstance::ClientInstance(unsigned short port, int dropRate,
   this->seqNum = 0;
   this->blockID = 0;
   this->transNum = 0;
-  this->numPendingBlocks = 0;
-  N = new Network(GROUP, port, dropRate);
+  N = new Network(GROUP, port, dropRate, CLIENT);
   INFO("init clientIntance done\n");
 }
 
@@ -41,9 +40,9 @@ int ClientInstance::OpenFile(char* fileName) {
 
   this->fd++;
   this->transNum = 1;
+
   INFO(" the newly opened fd is %d", fd);
-  OpenPkt *p = new OpenPkt((uint32_t) GUID, fd, (uint32_t) 0, (uint32_t) 0,
-                           fileName);
+  OpenPkt *p = new OpenPkt(GUID, fd, 0, transNum, fileName);
   N->send(p);
   DBG("send a file open packet!");
 
@@ -62,9 +61,9 @@ int ClientInstance::OpenFile(char* fileName) {
     PacketBase *pr = N->receive();
     if (pr == NULL || pr->type != OPEN_ACK)
       continue;
-    OpenAckPkt* p = (OpenAckPkt*) pr;
-    if (p->status == true) {
-      setResponses.insert(p->GUID);
+    OpenAckPkt* po = (OpenAckPkt*) pr;
+    if (po->status == true) {
+      setResponses.insert(po->GUID);
       if (setResponses.size() >= numServers) {
         isOpened = true;
         return fd;
@@ -83,6 +82,10 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
   WriteBlockPkt *p = new WriteBlockPkt(GUID, fd, 0, transNum, blockID,
                                        byteOffset, blockSize,
                                        (uint8_t*) strData);
+//  WriteBlockPkt::WriteBlockPkt(uint32_t GUID, int fd, uint32_t seqNum,
+//                               uint32_t transNum, int blockID, int offset,
+//                               int size, uint8_t* payload)
+//
   DBG("writing, transNum = %d, blockId = %d\n", transNum, blockID);
   N->send(p);
   this->pendingBlocks[blockID] = p;
@@ -90,18 +93,113 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
 }
 
 int ClientInstance::CommitVoting(int fd_) {
-  if (fd != fd_)
+  if (isOpened == false) {
+    ERROR("not opened but commit\n");
     return -1;
+  }
+
+  CommitVotingPkt *p = new CommitVotingPkt(GUID, fd, 0, transNum, blockID);
+  DBG("\n========================== commit voting ==============================================================\n");
+  N->send(p);
+
+  struct timeval beginTime;
+  struct timeval againTime;
+  gettimeofday(&beginTime, NULL);
+  gettimeofday(&againTime, NULL);
+  std::set<uint32_t> setResponses;
+
+  while (isTimeOut(beginTime, COLLECT_RESPONSE_TIME_OUT) == false) {
+    if (isTimeOut(againTime, RESEND_INTERVAL)) {
+      N->send(p);  //send again
+      gettimeofday(&againTime, NULL);
+      DBG("sending Voting again!!");
+    }
+
+    PacketBase *pr = N->receive();
+    if (pr == NULL)
+      continue;
+    if (pr->type == COMMIT_VOTING_SUCCESS) {
+      setResponses.insert(pr->GUID);
+      DBG("\n :):):):):):):)  SERVER %x ready \n", pr->GUID);
+      if (setResponses.size() >= numServers) {
+        delete p;
+        delete pr;
+        return 0;
+      }
+      delete pr;
+    }
+    if (pr->type == COMMIT_VOTING_RESEND) {
+      DBG("received a resend\n");
+      pr->printPacket();
+      CommitVotingResendPkt * pc = (CommitVotingResendPkt *) pr;
+      for (int i = 0; i < pc->totalMissing; i++) {
+        int missingID = pc->vectorMissingID[i];
+        N->send(pendingBlocks[missingID]);
+      }
+      gettimeofday(&beginTime, NULL);
+      delete pr;
+    }
+  }
+  DBG("\n====commit voting timed out!!\n");
+  return -1;  //timed out
 }
 
 int ClientInstance::CommitFinal(int fd_) {
   if (fd != fd_)
     return -1;
+  int ret;
+  DBG("================================commit final ================================\n");
+  cleanup();
+  CommitFinalPkt *p = new CommitFinalPkt(GUID, fd, 0, transNum);
+
+  N->send(p);
+  struct timeval beginTime;
+  struct timeval againTime;
+  gettimeofday(&beginTime, NULL);
+  gettimeofday(&againTime, NULL);
+  std::set<uint32_t> setResponses;
+
+  while (isTimeOut(beginTime, COLLECT_RESPONSE_TIME_OUT) == false) {
+    if (isTimeOut(againTime, RESEND_INTERVAL)) {
+      N->send(p);  //send again
+      gettimeofday(&againTime, NULL);
+      DBG("sending commit final again!!");
+    }
+
+    PacketBase *pr = N->receive();
+    if (pr == NULL || pr->type != COMMIT_FINAL_REPLY)
+      continue;
+    CommitFinalReplyPkt* pc = (CommitFinalReplyPkt*) pr;
+    if (pc->status == true) {
+      DBG("\n :):):):):):):)  SERVER %x commit success \n", pr->GUID);
+      setResponses.insert(pc->GUID);
+      if (setResponses.size() >= numServers) {
+        return 0;
+      }
+    }
+  }
+  DBG("\n====commit final timed out!!\n");
+  return -1;  //timed out
+
 }
 
+//AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum)
 int ClientInstance::Abort(int fd_) {
   if (fd != fd_)
     return -1;
+  AbortPkt *p = new AbortPkt(GUID, fd, 0, transNum);
+  return N->send(p);
+  cleanup();
+  return 0;
+
+}
+
+void ClientInstance::cleanup() {
+  for (int i = 0; i <= blockID; i++) {
+    if (pendingBlocks[i])
+      free(pendingBlocks[i]);
+  }
+  blockID = 0;
 }
 
 int ClientInstance::CloseFile(int fd_) {
@@ -120,36 +218,35 @@ bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
     return false;
 }
 
-
 bool ClientInstance::mismatch(PacketBase *ps, PacketBase *pr) {
-if (ps == NULL || pr == NULL) {
-ERROR("NULL packet pairs!");
-return 0;
-}
-switch (ps->type) {
-case OPEN:
-  if (pr->type == OPEN_ACK)
-    return true;
-  else
-    return false;
-case COMMIT_VOTING:
-case CLOSE:
-  if (pr->type == COMMIT_VOTING_SUCCESS || pr->type == COMMIT_VOTING_RESEND)
-    return true;
-  else
-    return false;
-case COMMIT_FINAL:
-  if (pr->type == COMMIT_FINAL_REPLY)
-    return true;
-  else
-    return false;
-case ABORT:
-case WRITE_BLOCK:
-  ERROR("abort or write_block shoudn't wait for reply !!! \n");
-default:
-  ERROR("send type error!!! not a clientIntance send type \n");
-  return false;
+  if (ps == NULL || pr == NULL) {
+    ERROR("NULL packet pairs!");
+    return 0;
+  }
+  switch (ps->type) {
+    case OPEN:
+      if (pr->type == OPEN_ACK)
+        return true;
+      else
+        return false;
+    case COMMIT_VOTING:
+    case CLOSE:
+      if (pr->type == COMMIT_VOTING_SUCCESS || pr->type == COMMIT_VOTING_RESEND)
+        return true;
+      else
+        return false;
+    case COMMIT_FINAL:
+      if (pr->type == COMMIT_FINAL_REPLY)
+        return true;
+      else
+        return false;
+    case ABORT:
+    case WRITE_BLOCK:
+      ERROR("abort or write_block shoudn't wait for reply !!! \n");
+    default:
+      ERROR("send type error!!! not a clientIntance send type \n");
+      return false;
 
-}
+  }
 
 }

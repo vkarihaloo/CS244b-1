@@ -21,7 +21,6 @@ class ClientInstance {
   uint32_t seqNum;
   uint32_t transNum;
   uint32_t blockID;
-  int numPendingBlocks;
   std::map<int, int> mapSeqNum;  //mapping from machine id to that machine's seq number
   std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number
   WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
@@ -42,6 +41,7 @@ class ClientInstance {
   bool isTimeOut(timeval oldTime, long timeOut);
   int collectResponse(PacketBase *p);
   bool mismatch(PacketBase *ps, PacketBase *pr);
+  void cleanup();
 };
 #endif /* CLIENTINSTANCE_H_ */
 

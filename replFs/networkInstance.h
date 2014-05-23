@@ -36,12 +36,13 @@
 
 class Network {
  public:
-  Network(int group, unsigned short port, int dropRate);
+  Network(int group, unsigned short port, int dropRate, int clientType);
   virtual ~Network();
   int send(PacketBase *p);    //
   PacketBase * receive();  //return the pointer to a packet
 
   int dropRate;
+  int nodeType;
 
  private:
   int mySocket;

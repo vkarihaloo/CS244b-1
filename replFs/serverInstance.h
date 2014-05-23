@@ -16,24 +16,24 @@ class ServerInstance {
   std::string fullPath;
   std::string mount;
   uint32_t GUID;
-  uint32_t seqNum;
-  int numPendingBlocks;
+  uint32_t transNum;
+
   int numMissingBlocks;
+  int numTotalBlocks;
   bool isOpened;
 
-  std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number
   WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
 
   Network *N;
 
-
-  void  processOpen(PacketBase *p);
-  void  processWriteBlock(PacketBase *p);
-  void  processCommitVoting(PacketBase *p);
-  void  processCommitFinal(PacketBase *p);
-  void  processAbort(PacketBase *p);
-  void  processClose(PacketBase *p);
-
+  void processOpen(PacketBase *p);
+  void processWriteBlock(PacketBase *p);
+  void processCommitVoting(PacketBase *p);
+  void processCommitFinal(PacketBase *p);
+  void processAbort(PacketBase *p);
+  void processClose(PacketBase *p);
+  void sweep(uint32_t transNum);
+  void cleanup();
  public:
   ServerInstance();
   ServerInstance(int port, std::string mount, int dropRate);
