@@ -19,7 +19,6 @@ ClientInstance::ClientInstance(unsigned short port, int dropRate,
   this->isOpened = false;
   srand(time(NULL));
   this->GUID = rand();
-  this->seqNum = 0;
   this->blockID = 0;
   this->transNum = 0;
   N = new Network(GROUP, port, dropRate, CLIENT);
@@ -96,6 +95,10 @@ int ClientInstance::CommitVoting(int fd_) {
   if (isOpened == false) {
     ERROR("not opened but commit\n");
     return -1;
+  }
+  if (blockID == 0) {
+    INFO("nothing to commit~~~~~~~~~~~~~~\n");
+    return 1;
   }
 
   CommitVotingPkt *p = new CommitVotingPkt(GUID, fd, 0, transNum, blockID);
@@ -174,11 +177,13 @@ int ClientInstance::CommitFinal(int fd_) {
       DBG("\n :):):):):):):)  SERVER %x commit success \n", pr->GUID);
       setResponses.insert(pc->GUID);
       if (setResponses.size() >= numServers) {
+        cleanup();
         return 0;
       }
     }
   }
   DBG("\n====commit final timed out!!\n");
+  cleanup();
   return -1;  //timed out
 
 }
@@ -188,24 +193,22 @@ int ClientInstance::Abort(int fd_) {
   if (fd != fd_)
     return -1;
   AbortPkt *p = new AbortPkt(GUID, fd, 0, transNum);
-  return N->send(p);
+  for (int i = 1; i < 4; i++)
+    N->send(p);
   cleanup();
   return 0;
 
 }
 
-void ClientInstance::cleanup() {
-  for (int i = 0; i <= blockID; i++) {
-    if (pendingBlocks[i])
-      free(pendingBlocks[i]);
-  }
-  blockID = 0;
-}
-
 int ClientInstance::CloseFile(int fd_) {
   if (fd != fd_)
     return -1;
-  this->transNum = 0;
+//TODO:
+
+  cleanup();
+  transNum = 0;
+  blockID = 0;
+  numPendingBlocks = 0;
 }
 
 bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
@@ -218,35 +221,11 @@ bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
     return false;
 }
 
-bool ClientInstance::mismatch(PacketBase *ps, PacketBase *pr) {
-  if (ps == NULL || pr == NULL) {
-    ERROR("NULL packet pairs!");
-    return 0;
+void ClientInstance::cleanup() {
+  for (int i = 0; i <= blockID; i++) {
+    if (pendingBlocks[i])
+      free(pendingBlocks[i]);
   }
-  switch (ps->type) {
-    case OPEN:
-      if (pr->type == OPEN_ACK)
-        return true;
-      else
-        return false;
-    case COMMIT_VOTING:
-    case CLOSE:
-      if (pr->type == COMMIT_VOTING_SUCCESS || pr->type == COMMIT_VOTING_RESEND)
-        return true;
-      else
-        return false;
-    case COMMIT_FINAL:
-      if (pr->type == COMMIT_FINAL_REPLY)
-        return true;
-      else
-        return false;
-    case ABORT:
-    case WRITE_BLOCK:
-      ERROR("abort or write_block shoudn't wait for reply !!! \n");
-    default:
-      ERROR("send type error!!! not a clientIntance send type \n");
-      return false;
-
-  }
-
+  blockID = 0;
+  transNum++;
 }

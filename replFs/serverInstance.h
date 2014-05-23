@@ -16,8 +16,8 @@ class ServerInstance {
   std::string fullPath;
   std::string mount;
   uint32_t GUID;
-  uint32_t transNum;
 
+  uint32_t transNum;
   int numMissingBlocks;
   int numTotalBlocks;
   bool isOpened;

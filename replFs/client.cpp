@@ -78,6 +78,8 @@ int Commit(int fd) {
   /* - Check that all writes made it to the server(s) */
   /****************************************************/
   ret = C->CommitVoting(fd);
+  if (ret == 1) //nothing to commit
+    return NormalReturn;
   if (ret == ErrorReturn)
     return ErrorReturn;
   /****************/
@@ -118,7 +120,9 @@ int CloseFile(int fd) {
   /*****************************/
   /* Check for Commit or Abort */
   /*****************************/
-  int ret = C->CloseFile(fd);
+  int ret = Commit(fd);
+  if (ret == 0)
+    ret = C->CloseFile(fd);
 
   if (ret < 0) {
     ERROR("Close");

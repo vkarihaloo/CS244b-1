@@ -5,6 +5,7 @@
  *      Author: songhan
  */
 #include "serverInstance.h"
+#include <sys/stat.h>
 
 ServerInstance::ServerInstance() {
 
@@ -22,6 +23,9 @@ ServerInstance::ServerInstance(int port, std::string mount, int dropRate) {
   this->fd = 0;
   for (int i = 0; i < MAX_PENDING; i++) {
     pendingBlocks[i] = NULL;
+  }
+  if (mkdir(mount.c_str(), S_IRUSR | S_IWUSR)<0){
+    ERROR("cannot make director\n");
   }
 
 }
@@ -135,9 +139,9 @@ void ServerInstance::processCommitFinal(PacketBase* pb) {
   if (fullPath.c_str() == "")
     ERROR("the full path name is missing\n");
 
-  FILE *f = fopen(fullPath.c_str(), "r+b");
+  FILE *f = fopen(fullPath.c_str(), "r+");
   if (f == NULL) {
-    f = fopen(fullPath.c_str(), "wb");
+    f = fopen(fullPath.c_str(), "w");
     if (f == NULL) {
         ERROR("error open file\n");
         return;
@@ -162,7 +166,9 @@ void ServerInstance::processCommitFinal(PacketBase* pb) {
 }
 
 void ServerInstance::processAbort(PacketBase* pb) {
+  DBG("============555=========== processing abort ========   %s\n", fullPath.c_str());
   pb->printPacket();
+  cleanup();
 }
 
 void ServerInstance::processClose(PacketBase* pb) {

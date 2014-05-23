@@ -18,11 +18,9 @@ class ClientInstance {
   std::string fileName;
   int numServers;
   uint32_t GUID;
-  uint32_t seqNum;
   uint32_t transNum;
   uint32_t blockID;
-  std::map<int, int> mapSeqNum;  //mapping from machine id to that machine's seq number
-  std::map<int, int>::iterator iterSeqNum;  //mapping from machine id to that machine's seq number
+  int numPendingBlocks;
   WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
   Network *N;
   bool isOpened;
@@ -39,8 +37,6 @@ class ClientInstance {
   int CloseFile(int fd);
  private:
   bool isTimeOut(timeval oldTime, long timeOut);
-  int collectResponse(PacketBase *p);
-  bool mismatch(PacketBase *ps, PacketBase *pr);
   void cleanup();
 };
 #endif /* CLIENTINSTANCE_H_ */
