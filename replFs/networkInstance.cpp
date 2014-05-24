@@ -43,7 +43,7 @@ Network::Network(int group, unsigned short port, int dropRate, int nodeType) {
   nullAddr.sin_family = AF_INET;
   nullAddr.sin_addr.s_addr = htonl(INADDR_ANY);
   nullAddr.sin_port = htons(port);
-  DBG("on init, it port = %d, group =%x\n", htons(port), group);
+  DBG("on init, it's port = %d, group =%x\n", port, group);
   if (bind(mySocket, (struct sockaddr *) &nullAddr, sizeof(nullAddr)) < 0)
     ERROR("netInit binding");
 
@@ -124,7 +124,7 @@ PacketBase * Network::receive() {
         ERROR("recvfrom error!");
         return NULL;
       } else if (randNum < dropRate) {
-        INFO("\npacket dropped!\n\n");
+        INFO(" DDDDDDDDDDD:  packet dropped!\n\n");
         return NULL;
       } else {
 //        DBG("\ndeserializing packet:\n");
@@ -181,6 +181,11 @@ PacketBase * Network::receive() {
             break;
           case CLOSE:
             p = new ClosePkt();
+            p->deserialize(stream);
+            // stream >> p;
+            break;
+          case CLOSE_REPLY:
+            p = new CloseReplyPkt();
             p->deserialize(stream);
             // stream >> p;
             break;

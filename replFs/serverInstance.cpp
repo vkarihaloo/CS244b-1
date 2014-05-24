@@ -24,8 +24,8 @@ ServerInstance::ServerInstance(int port, std::string mount, int dropRate) {
   for (int i = 0; i < MAX_PENDING; i++) {
     pendingBlocks[i] = NULL;
   }
-  if (mkdir(mount.c_str(), S_IRUSR | S_IWUSR)<0){
-    ERROR("cannot make director\n");
+  if (mkdir(mount.c_str(), S_IRUSR | S_IWUSR) < 0) {
+    INFO("dir already exist\n");
   }
 
 }
@@ -40,8 +40,7 @@ ServerInstance::~ServerInstance() {
 
 void ServerInstance::processOpen(PacketBase* pb) {
   if (isOpened) {
-    INFO("already opened on server!!");
-    return;
+    INFO("already opened on server, open again\n\n");
   }
   pb->printPacket();
   isOpened = true;
@@ -55,29 +54,11 @@ void ServerInstance::processOpen(PacketBase* pb) {
   delete pb;
 
 }
-void ServerInstance::sweep(uint32_t transNum) {
-  for (int i = 0; i < MAX_PENDING; i++) {
-    if (pendingBlocks[i] && pendingBlocks[i]->transNum < transNum) {
-      INFO("obsolete block!\n");
-      delete pendingBlocks[i];
-    }
-  }
-}
-
-void ServerInstance::cleanup() {
-  for (int i = 0; i < MAX_PENDING; i++) {
-    if (pendingBlocks[i]) {
-      delete pendingBlocks[i];
-    }
-  }
-  numTotalBlocks = 0;
-  numMissingBlocks = 0;
-}
 
 void ServerInstance::processWriteBlock(PacketBase* pb) {
   DBG("========2==processing Writing block===========\n");
   pb->printPacket();
-  if (pb->fd != fd)
+  if (pb->fd != fd || isOpened == false)
     return;
   WriteBlockPkt *p = (WriteBlockPkt*) pb;
   transNum = p->transNum;
@@ -100,7 +81,7 @@ void ServerInstance::processWriteBlock(PacketBase* pb) {
 void ServerInstance::processCommitVoting(PacketBase* pb) {
   DBG("============333=========== processing Commit voting ============\n");
   pb->printPacket();
-  if (pb->fd != fd)
+  if (pb->fd != fd || isOpened == false)
     return;
   if (transNum != pb->transNum) {
     ERROR("wrong transaction number!!\n");
@@ -129,27 +110,33 @@ void ServerInstance::processCommitVoting(PacketBase* pb) {
     delete ps;
   }
 
-  delete p;
+  delete pb;
 
 }
 
 void ServerInstance::processCommitFinal(PacketBase* pb) {
-  DBG("============444=========== processing Commit final ============   %s\n", fullPath.c_str());
+  DBG("============444=========== processing Commit final ============   %s\n",
+      fullPath.c_str());
   pb->printPacket();
+  if (pb->fd != fd || isOpened == false)
+    return;
   if (fullPath.c_str() == "")
     ERROR("the full path name is missing\n");
 
   FILE *f = fopen(fullPath.c_str(), "r+");
   if (f == NULL) {
-    f = fopen(fullPath.c_str(), "w");
+    DBG(" ************* file not existed yet, creating a new file and overwrite the old  ************\n");
+    f = fopen(fullPath.c_str(), "wb");
     if (f == NULL) {
-        ERROR("error open file\n");
-        return;
-      }
+      ERROR("error open file\n");
+      delete pb;
+      return;
+    }
   }
 
   for (int i = 0; i < numTotalBlocks; i++) {
-    if (pendingBlocks[i] != NULL && pendingBlocks[i]->transNum == pb->transNum) {
+    if (pendingBlocks[i] != NULL
+        && pendingBlocks[i]->transNum == pb->transNum) {
 
       fseek(f, pendingBlocks[i]->offset, SEEK_SET);
       fwrite(pendingBlocks[i]->payload, 1, pendingBlocks[i]->size, f);
@@ -166,16 +153,28 @@ void ServerInstance::processCommitFinal(PacketBase* pb) {
 }
 
 void ServerInstance::processAbort(PacketBase* pb) {
-  DBG("============555=========== processing abort ========   %s\n", fullPath.c_str());
+  DBG("============555=========== processing abort ========   %s\n",
+      fullPath.c_str());
   pb->printPacket();
+  if (pb->fd != fd || isOpened == false)
+    return;
   cleanup();
+  delete pb;
 }
 
 void ServerInstance::processClose(PacketBase* pb) {
+  DBG("============666=========== processing close ======== \n");
   pb->printPacket();
-
-
-
+  if (pb->fd != fd || isOpened == false)
+    return;
+  CloseReplyPkt *p = new CloseReplyPkt(GUID, fd, 0, transNum, true);
+  N->send(p);
+  cleanup();
+  transNum = 0;
+  isOpened = false;
+  fullPath = "";
+  delete pb;
+  delete p;
 }
 
 void ServerInstance::run() {
@@ -218,3 +217,23 @@ void ServerInstance::run() {
   }
 }
 
+void ServerInstance::sweep(uint32_t transNum) {
+  for (int i = 0; i < MAX_PENDING; i++) {
+    if (pendingBlocks[i] && pendingBlocks[i]->transNum < transNum) {
+      INFO("obsolete block!\n");
+      delete pendingBlocks[i];
+      pendingBlocks[i] = NULL;
+    }
+  }
+}
+
+void ServerInstance::cleanup() {
+  for (int i = 0; i < MAX_PENDING; i++) {
+    if (pendingBlocks[i]) {
+      delete pendingBlocks[i];
+      pendingBlocks[i] = NULL;
+    }
+  }
+  numTotalBlocks = 0;
+  numMissingBlocks = 0;
+}

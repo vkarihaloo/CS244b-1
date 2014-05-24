@@ -32,7 +32,8 @@ enum PacketType {
   COMMIT_FINAL,
   COMMIT_FINAL_REPLY,
   ABORT,
-  CLOSE
+  CLOSE,
+  CLOSE_REPLY
 };
 
 enum NodeType {
@@ -201,10 +202,8 @@ class AbortPkt : public PacketBase {
 
 class ClosePkt : public PacketBase {
  public:
-  int totalPending;
 
-  ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
-           int totalPending);
+  ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum);
   ClosePkt() {
   }
   virtual ~ClosePkt() {
@@ -213,6 +212,22 @@ class ClosePkt : public PacketBase {
   virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
   virtual void printPacket();
 };
+
+class CloseReplyPkt : public PacketBase {
+ public:
+  bool status;
+
+  CloseReplyPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
+                      bool status);
+  CloseReplyPkt() {
+  }
+  virtual ~CloseReplyPkt() {
+  }
+  virtual void serialize(std::ostream& stream) const;   //upload it to stream
+  virtual void deserialize(std::istream& stream);  //download from the stream and assemble the struct
+  virtual void printPacket();
+};
+
 
 //overloaded << and >> for serialization and de-serialization. Since all serialization methods are
 //virtual, this supports polymorphism and dynamic dispatch

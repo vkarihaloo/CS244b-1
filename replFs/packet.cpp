@@ -25,7 +25,7 @@ OpenPkt::OpenPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
   for (i = 0; i < strlen(fileName) && i < MAX_FILE_NAME - 1; i++) {
     this->fileName[i] = fileName[i];
   }
-  fileName[i] = '\0';
+  this->fileName[i] = '\0';
 }
 
 OpenAckPkt::OpenAckPkt(uint32_t GUID, int fd, uint32_t seqNum,
@@ -84,10 +84,14 @@ AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum)
     : PacketBase(ABORT, CLIENT, GUID, fd, seqNum, transNum) {
 }
 
-ClosePkt::ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,
-                   int totalPending)
+ClosePkt::ClosePkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum)
     : PacketBase(CLOSE, CLIENT, GUID, fd, seqNum, transNum) {
-  this->totalPending = totalPending;
+}
+
+CloseReplyPkt::CloseReplyPkt(uint32_t GUID, int fd, uint32_t seqNum,
+                             uint32_t transNum, bool status)
+    : PacketBase(CLOSE_REPLY, SERVER, GUID, fd, seqNum, transNum) {
+  this->status = status;
 }
 
 void PacketBase::serialize(std::ostream& stream) const {
@@ -239,13 +243,18 @@ void AbortPkt::deserialize(std::istream& stream) {
 
 void ClosePkt::serialize(std::ostream& stream) const {
   PacketBase::serialize(stream);
-  stream.write(reinterpret_cast<const char *>(&totalPending),
-               sizeof(totalPending));
 }
 
 void ClosePkt::deserialize(std::istream& stream) {
   PacketBase::deserialize(stream);
-  stream.read(reinterpret_cast<char *>(&totalPending), sizeof(totalPending));
+}
+
+void CloseReplyPkt::serialize(std::ostream& stream) const {
+  PacketBase::serialize(stream);
+}
+
+void CloseReplyPkt::deserialize(std::istream& stream) {
+  PacketBase::deserialize(stream);
 }
 
 std::istream& operator>>(std::istream &stream, PacketBase *packet) {
@@ -277,9 +286,9 @@ bool PacketBase::checkSumCorrect() {
 }
 
 void PacketBase::printPacket() {
- std::string typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
+  std::string typeStr[] = { "OPEN", "OPEN_ACK", "WRITE_BLOCK", "COMMIT_VOTING",
       "COMMIT_VOTING_SUCCESS", "COMMIT_VOTING_RESEND", "COMMIT_FINAL",
-      "COMMIT_FINAL_REPLY", "ABORT", "CLOSE" };
+      "COMMIT_FINAL_REPLY", "ABORT", "CLOSE", "CLOSE_REPLY"};
   DBG(" type=%s, nodeType=%d, GUID=%x, fd=%d, seqNum=%d, transNum=%d | ",
       typeStr[type].c_str(), nodeType, GUID, fd, seqNum, transNum);
 }
@@ -296,7 +305,8 @@ void OpenAckPkt::printPacket() {
 
 void WriteBlockPkt::printPacket() {
   PacketBase::printPacket();
-  DBG("blockID=%d, offset=%d, size=%d \n    ====== payload= ", blockID, offset, size);
+  DBG("blockID=%d, offset=%d, size=%d \n    ====== payload= ", blockID, offset,
+      size);
   for (int i = 0; i < size; i++) {
     DBG("%c", payload[i]);
   }DBG("\n");
@@ -337,6 +347,11 @@ void AbortPkt::printPacket() {
 
 void ClosePkt::printPacket() {
   PacketBase::printPacket();
-  DBG("totalPending=%d\n", totalPending);
+  DBG("\n");
+}
+
+void CloseReplyPkt::printPacket() {
+  PacketBase::printPacket();
+  DBG("\n");
 }
 

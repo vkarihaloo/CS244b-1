@@ -22,6 +22,9 @@ ClientInstance::ClientInstance(unsigned short port, int dropRate,
   this->blockID = 0;
   this->transNum = 0;
   N = new Network(GROUP, port, dropRate, CLIENT);
+  for (int i = 0; i < MAX_PENDING; i++) {
+    pendingBlocks[i] = NULL;
+  }
   INFO("init clientIntance done\n");
 }
 
@@ -34,14 +37,16 @@ ClientInstance::~ClientInstance() {
 }
 
 int ClientInstance::OpenFile(char* fileName) {
+  DBG("inf clientInstance OpenFile1");
   if (isOpened || fileName == NULL || strlen(fileName) > MAX_FILE_NAME)
     return -1;
 
   this->fd++;
   this->transNum = 1;
 
-  INFO(" the newly opened fd is %d", fd);
+  DBG(" the newly opened fd is %d", fd);
   OpenPkt *p = new OpenPkt(GUID, fd, 0, transNum, fileName);
+  DBG("inf clientInstance OpenFile2");
   N->send(p);
   DBG("send a file open packet!");
 
@@ -58,17 +63,25 @@ int ClientInstance::OpenFile(char* fileName) {
       DBG("sending open again!!");
     }
     PacketBase *pr = N->receive();
-    if (pr == NULL || pr->type != OPEN_ACK)
+    if (pr == NULL)
       continue;
+    if (pr->type != OPEN_ACK) {
+      delete pr;
+      continue;
+    }
     OpenAckPkt* po = (OpenAckPkt*) pr;
     if (po->status == true) {
       setResponses.insert(po->GUID);
       if (setResponses.size() >= numServers) {
         isOpened = true;
+        delete pr;
+        delete p;
         return fd;
       }
     }
+    delete pr;
   }
+  delete p;
   return -1;  //timed out
 }
 
@@ -97,7 +110,7 @@ int ClientInstance::CommitVoting(int fd_) {
     return -1;
   }
   if (blockID == 0) {
-    INFO("nothing to commit~~~~~~~~~~~~~~\n");
+    DBG("nothing to commit~~~~~~~~~~~~~~\n");
     return 1;
   }
 
@@ -130,8 +143,7 @@ int ClientInstance::CommitVoting(int fd_) {
         return 0;
       }
       delete pr;
-    }
-    if (pr->type == COMMIT_VOTING_RESEND) {
+    } else if (pr->type == COMMIT_VOTING_RESEND) {
       DBG("received a resend\n");
       pr->printPacket();
       CommitVotingResendPkt * pc = (CommitVotingResendPkt *) pr;
@@ -140,6 +152,9 @@ int ClientInstance::CommitVoting(int fd_) {
         N->send(pendingBlocks[missingID]);
       }
       gettimeofday(&beginTime, NULL);
+      delete pr;
+    } else {
+      // other useless packets.
       delete pr;
     }
   }
@@ -152,9 +167,7 @@ int ClientInstance::CommitFinal(int fd_) {
     return -1;
   int ret;
   DBG("================================commit final ================================\n");
-  cleanup();
   CommitFinalPkt *p = new CommitFinalPkt(GUID, fd, 0, transNum);
-
   N->send(p);
   struct timeval beginTime;
   struct timeval againTime;
@@ -170,20 +183,28 @@ int ClientInstance::CommitFinal(int fd_) {
     }
 
     PacketBase *pr = N->receive();
-    if (pr == NULL || pr->type != COMMIT_FINAL_REPLY)
+    if (pr == NULL)
       continue;
+    if (pr->type != COMMIT_FINAL_REPLY) {
+      delete pr;
+      continue;
+    }
     CommitFinalReplyPkt* pc = (CommitFinalReplyPkt*) pr;
     if (pc->status == true) {
-      DBG("\n :):):):):):):)  SERVER %x commit success \n", pr->GUID);
+      DBG("\n :):):):):):):)  SERVER %x commit final success \n", pr->GUID);
       setResponses.insert(pc->GUID);
       if (setResponses.size() >= numServers) {
         cleanup();
+        delete pr;
+        delete p;
         return 0;
       }
     }
+    delete pr;
   }
   DBG("\n====commit final timed out!!\n");
   cleanup();
+  delete p;
   return -1;  //timed out
 
 }
@@ -196,6 +217,7 @@ int ClientInstance::Abort(int fd_) {
   for (int i = 1; i < 4; i++)
     N->send(p);
   cleanup();
+  delete p;
   return 0;
 
 }
@@ -203,12 +225,55 @@ int ClientInstance::Abort(int fd_) {
 int ClientInstance::CloseFile(int fd_) {
   if (fd != fd_)
     return -1;
-//TODO:
+  ClosePkt *p = new ClosePkt(GUID, fd, 0, transNum);
 
+  N->send(p);
+  struct timeval beginTime;
+  struct timeval againTime;
+  gettimeofday(&beginTime, NULL);
+  gettimeofday(&againTime, NULL);
+  std::set<uint32_t> setResponses;
+
+  while (isTimeOut(beginTime, COLLECT_RESPONSE_TIME_OUT) == false) {
+    if (isTimeOut(againTime, RESEND_INTERVAL)) {
+      N->send(p);  //send again
+      gettimeofday(&againTime, NULL);
+      DBG("sending close file packet again!!");
+    }
+
+    PacketBase *pr = N->receive();
+    if (pr == NULL)
+      continue;
+    if (pr->type != CLOSE_REPLY) {
+      delete pr;
+      continue;
+    }
+    CloseReplyPkt* pc = (CloseReplyPkt*) pr;
+    if (pc->status == true) {
+      DBG("\n :):):):):):):)  SERVER %x file closed success \n", pr->GUID);
+      setResponses.insert(pc->GUID);
+      if (setResponses.size() >= numServers) {
+        DBG("\n :):):):):):):)  all closed success\n");
+        cleanup();
+        transNum = 0;
+        blockID = 0;
+        numPendingBlocks = 0;
+        delete p;
+        delete pr;
+        return 0;
+      }
+    }
+    delete pr;
+  }
+  DBG("\n====file close timed out!!\n");
   cleanup();
   transNum = 0;
   blockID = 0;
   numPendingBlocks = 0;
+  isOpened = false;
+  fileName = "";
+  delete p;
+  return -1;  //timed out
 }
 
 bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
@@ -223,8 +288,10 @@ bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
 
 void ClientInstance::cleanup() {
   for (int i = 0; i <= blockID; i++) {
-    if (pendingBlocks[i])
+    if (pendingBlocks[i]) {
       free(pendingBlocks[i]);
+      pendingBlocks[i] = NULL;
+    }
   }
   blockID = 0;
   transNum++;
