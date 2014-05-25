@@ -88,7 +88,7 @@ int Network::send(PacketBase* p) {
   insertSeqNumber(p);
   std::stringstream stream;
   p->serialize(stream);  //p>>stream;
-  DBG("\nsending packet\n");
+  DBG("\nsending packet: ");
   p->printPacket();
   int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
                    (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in));
@@ -124,7 +124,7 @@ PacketBase * Network::receive() {
         ERROR("recvfrom error!");
         return NULL;
       } else if (randNum < dropRate) {
-        INFO(" DDDDDDDDDDD:  packet dropped!\n\n");
+        INFO(" DDDDDDDDDDD:  packet dropped! buf type is %d\n\n", buf[0]);
         return NULL;
       } else {
 //        DBG("\ndeserializing packet:\n");
@@ -228,12 +228,9 @@ struct sockaddr_in * Network::resolveHost(register char *name) {
     bcopy(fhost->h_addr, &sa.sin_addr, fhost->h_length);
   } else {
     fadd.s_addr = inet_addr(name);
-    if (fadd.s_addr != -1) {
-      sa.sin_family = AF_INET; /* grot */
-      sa.sin_port = 0;
-      sa.sin_addr.s_addr = fadd.s_addr;
-    } else
-    return(NULL);
+    sa.sin_family = AF_INET; /* grot */
+    sa.sin_port = 0;
+    sa.sin_addr.s_addr = fadd.s_addr;
   }
   return (&sa);
 }

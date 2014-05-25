@@ -120,7 +120,7 @@ void ServerInstance::processCommitFinal(PacketBase* pb) {
   pb->printPacket();
   if (pb->fd != fd || isOpened == false)
     return;
-  if (fullPath.c_str() == "")
+  if (strcmp (fullPath.c_str(), "")==0)
     ERROR("the full path name is missing\n");
 
   FILE *f = fopen(fullPath.c_str(), "r+");
@@ -165,7 +165,7 @@ void ServerInstance::processAbort(PacketBase* pb) {
 void ServerInstance::processClose(PacketBase* pb) {
   DBG("============666=========== processing close ======== \n");
   pb->printPacket();
-  if (pb->fd != fd || isOpened == false)
+  if (pb->fd != fd)
     return;
   CloseReplyPkt *p = new CloseReplyPkt(GUID, fd, 0, transNum, true);
   N->send(p);

@@ -16,7 +16,7 @@ class ClientInstance {
  private:
   int fd;
   std::string fileName;
-  int numServers;
+  uint32_t numServers;
   uint32_t GUID;
   uint32_t transNum;
   uint32_t blockID;

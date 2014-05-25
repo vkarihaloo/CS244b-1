@@ -41,7 +41,7 @@ class Network {
   int send(PacketBase *p);    //
   PacketBase * receive();  //return the pointer to a packet
 
-  int dropRate;
+  unsigned int dropRate;
   int nodeType;
 
  private:

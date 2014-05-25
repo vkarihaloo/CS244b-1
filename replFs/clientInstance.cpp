@@ -37,16 +37,15 @@ ClientInstance::~ClientInstance() {
 }
 
 int ClientInstance::OpenFile(char* fileName) {
-  DBG("inf clientInstance OpenFile1");
   if (isOpened || fileName == NULL || strlen(fileName) > MAX_FILE_NAME)
     return -1;
 
   this->fd++;
   this->transNum = 1;
 
-  DBG(" the newly opened fd is %d", fd);
+  DBG("\n^^^^^^^^^^^^^^^^^^^^ Client Open File Called!  ^^^^^^^^^^^^^^^^^^^^^\n");
+  DBG("the newly opened fd is %d\n", fd);
   OpenPkt *p = new OpenPkt(GUID, fd, 0, transNum, fileName);
-  DBG("inf clientInstance OpenFile2");
   N->send(p);
   DBG("send a file open packet!");
 
@@ -60,7 +59,7 @@ int ClientInstance::OpenFile(char* fileName) {
     if (isTimeOut(againTime, RESEND_INTERVAL)) {
       N->send(p);  //send again
       gettimeofday(&againTime, NULL);
-      DBG("sending open again!!");
+      DBG("sending open again!!\n");
     }
     PacketBase *pr = N->receive();
     if (pr == NULL)
@@ -72,6 +71,7 @@ int ClientInstance::OpenFile(char* fileName) {
     OpenAckPkt* po = (OpenAckPkt*) pr;
     if (po->status == true) {
       setResponses.insert(po->GUID);
+      DBG("\n :):):):):):):)  SERVER %x ready for open\n", pr->GUID);
       if (setResponses.size() >= numServers) {
         isOpened = true;
         delete pr;
@@ -91,6 +91,9 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
       || byteOffset
           < 0|| byteOffset + blockSize> MAX_FILE_SIZE || byteOffset<0 || strData ==NULL || blockSize<0 || blockSize > MAX_PAY_LOAD)
     return -1;
+
+  DBG("\n^^^^^^^^^^^^^^^^^^^^ Client Write Block Called!  ^^^^^^^^^^^^^^^^^^^^^\n");
+
   WriteBlockPkt *p = new WriteBlockPkt(GUID, fd, 0, transNum, blockID,
                                        byteOffset, blockSize,
                                        (uint8_t*) strData);
@@ -102,11 +105,12 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
   N->send(p);
   this->pendingBlocks[blockID] = p;
   this->blockID++;
+  return 0;
 }
 
 int ClientInstance::CommitVoting(int fd_) {
-  if (isOpened == false) {
-    ERROR("not opened but commit\n");
+  if (fd != fd_ || isOpened == false) {
+    ERROR("not opened yet! \n");
     return -1;
   }
   if (blockID == 0) {
@@ -115,7 +119,7 @@ int ClientInstance::CommitVoting(int fd_) {
   }
 
   CommitVotingPkt *p = new CommitVotingPkt(GUID, fd, 0, transNum, blockID);
-  DBG("\n========================== commit voting ==============================================================\n");
+  DBG("\n^^^^^^^^^^^^^^^^^^^^ Client Commit Voting Called!  ^^^^^^^^^^^^^^^^^^^^^\n");
   N->send(p);
 
   struct timeval beginTime;
@@ -163,10 +167,9 @@ int ClientInstance::CommitVoting(int fd_) {
 }
 
 int ClientInstance::CommitFinal(int fd_) {
-  if (fd != fd_)
+  if (fd != fd_ || isOpened == false)
     return -1;
-  int ret;
-  DBG("================================commit final ================================\n");
+  DBG("\n^^^^^^^^^^^^^^^^^^^^ Client Commit Final Called!  ^^^^^^^^^^^^^^^^^^^^^\n");
   CommitFinalPkt *p = new CommitFinalPkt(GUID, fd, 0, transNum);
   N->send(p);
   struct timeval beginTime;
@@ -211,8 +214,9 @@ int ClientInstance::CommitFinal(int fd_) {
 
 //AbortPkt::AbortPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum)
 int ClientInstance::Abort(int fd_) {
-  if (fd != fd_)
+  if (fd != fd_ || isOpened == false)
     return -1;
+  DBG("\n^^^^^^^^^^^^^^^^^^^^ Client Abort Called!  ^^^^^^^^^^^^^^^^^^^^^\n");
   AbortPkt *p = new AbortPkt(GUID, fd, 0, transNum);
   for (int i = 1; i < 4; i++)
     N->send(p);
@@ -223,10 +227,11 @@ int ClientInstance::Abort(int fd_) {
 }
 
 int ClientInstance::CloseFile(int fd_) {
-  if (fd != fd_)
+  if (fd != fd_ || isOpened == false)
     return -1;
-  ClosePkt *p = new ClosePkt(GUID, fd, 0, transNum);
+  DBG("^^^^^^^^^^^^^^^^^^^^^^ Client Close File Called ^^^^^^^^^^^^^^^^^^^^^^\n");
 
+  ClosePkt *p = new ClosePkt(GUID, fd, 0, transNum);
   N->send(p);
   struct timeval beginTime;
   struct timeval againTime;
@@ -238,7 +243,7 @@ int ClientInstance::CloseFile(int fd_) {
     if (isTimeOut(againTime, RESEND_INTERVAL)) {
       N->send(p);  //send again
       gettimeofday(&againTime, NULL);
-      DBG("sending close file packet again!!");
+      DBG("sending close file packet again!!\n");
     }
 
     PacketBase *pr = N->receive();
@@ -258,6 +263,7 @@ int ClientInstance::CloseFile(int fd_) {
         transNum = 0;
         blockID = 0;
         numPendingBlocks = 0;
+        isOpened = false;
         delete p;
         delete pr;
         return 0;
@@ -287,7 +293,7 @@ bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
 }
 
 void ClientInstance::cleanup() {
-  for (int i = 0; i <= blockID; i++) {
+  for (uint i = 0; i <= blockID; i++) {
     if (pendingBlocks[i]) {
       free(pendingBlocks[i]);
       pendingBlocks[i] = NULL;

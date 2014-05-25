@@ -352,6 +352,6 @@ void ClosePkt::printPacket() {
 
 void CloseReplyPkt::printPacket() {
   PacketBase::printPacket();
-  DBG("\n");
+  DBG("status = %d\n", this->status);
 }
 
