@@ -85,11 +85,11 @@ Network::~Network() {
 }
 
 int Network::send(PacketBase* p) {
-  insertSeqNumber(p);
-  std::stringstream stream;
-  p->serialize(stream);  //p>>stream;
   DBG("\nsending packet: ");
   p->printPacket();
+//  insertSeqNumber(p);
+  std::stringstream stream;
+  p->serialize(stream);  //p>>stream;
   int ret = sendto(mySocket, stream.str().c_str(), stream.str().length(), 0,
                    (struct sockaddr *) &groupAddr, sizeof(struct sockaddr_in));
   if (ret < 0) {
@@ -245,6 +245,7 @@ bool Network::outOfOrder(PacketBase* p) {
       p->printPacket();
       return 1;
     } else {
+      mapSeqNum[p->GUID] = p->seqNum;
       return 0;
     }
   } else {
@@ -254,6 +255,9 @@ bool Network::outOfOrder(PacketBase* p) {
 }
 
 void Network::insertSeqNumber(PacketBase* p) {
+//  for(std::map<uint32_t, uint32_t>::iterator iter = mapSeqNum.begin(); iter != mapSeqNum.end(); ++ iter){
+//    DBG("%d, %d\n", iter->first, iter->second);
+//  }
   if (mapSeqNum.count(p->GUID) != 0) {
     p->seqNum = (++mapSeqNum[p->GUID]);
   } else {

@@ -21,7 +21,7 @@ class ClientInstance {
   uint32_t transNum;
   uint32_t blockID;
   int numPendingBlocks;
-  WriteBlockPkt* pendingBlocks[MAX_PENDING];  //mapping from block id to packet that contains the payload
+  WriteBlockPkt* pendingBlocks[MAX_PENDING + 1];  //mapping from block id to packet that contains the payload
   Network *N;
   bool isOpened;
 

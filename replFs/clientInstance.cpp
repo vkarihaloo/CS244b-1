@@ -22,7 +22,7 @@ ClientInstance::ClientInstance(unsigned short port, int dropRate,
   this->blockID = 0;
   this->transNum = 0;
   N = new Network(GROUP, port, dropRate, CLIENT);
-  for (int i = 0; i < MAX_PENDING; i++) {
+  for (int i = 0; i < MAX_PENDING + 1; i++) {
     pendingBlocks[i] = NULL;
   }
   INFO("init clientIntance done\n");
@@ -103,6 +103,13 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
 //
   DBG("writing, transNum = %d, blockId = %d\n", transNum, blockID);
   N->send(p);
+  if (pendingBlocks[blockID] != NULL) {
+    delete pendingBlocks[blockID];
+  }
+  if (blockID >= MAX_PAY_LOAD) {
+    ERROR("overflow!!!!!!!!!!!!!!!!!!!");
+    return -1;
+  }
   this->pendingBlocks[blockID] = p;
   this->blockID++;
   return 0;
@@ -295,7 +302,7 @@ bool ClientInstance::isTimeOut(timeval oldTime, long timeOut) {
 void ClientInstance::cleanup() {
   for (uint i = 0; i <= blockID; i++) {
     if (pendingBlocks[i]) {
-      free(pendingBlocks[i]);
+      delete pendingBlocks[i];
       pendingBlocks[i] = NULL;
     }
   }
