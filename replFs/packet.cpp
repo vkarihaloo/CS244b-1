@@ -15,7 +15,7 @@ PacketBase::PacketBase(uint8_t type, uint8_t nodeType, uint32_t GUID, int fd,
   this->fd = fd;
   this->seqNum = seqNum;
   this->transNum = transNum;
-  this->checkSum = cksum(this, sizeof(PacketBase));
+  this->checkSum = cksum((void *)this, sizeof(PacketBase));
 }
 
 OpenPkt::OpenPkt(uint32_t GUID, int fd, uint32_t seqNum, uint32_t transNum,

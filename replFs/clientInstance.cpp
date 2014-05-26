@@ -30,7 +30,7 @@ ClientInstance::ClientInstance(unsigned short port, int dropRate,
 
 ClientInstance::~ClientInstance() {
   delete N;
-  for (int i = 0; i < MAX_PENDING; i++) {
+  for (int i = 0; i < MAX_PENDING + 1; i++) {
     if (pendingBlocks[i] != NULL)
       delete pendingBlocks[i];
   }
@@ -97,18 +97,14 @@ int ClientInstance::WriteBlock(int fd_, char* strData, int byteOffset,
   WriteBlockPkt *p = new WriteBlockPkt(GUID, fd, 0, transNum, blockID,
                                        byteOffset, blockSize,
                                        (uint8_t*) strData);
-//  WriteBlockPkt::WriteBlockPkt(uint32_t GUID, int fd, uint32_t seqNum,
-//                               uint32_t transNum, int blockID, int offset,
-//                               int size, uint8_t* payload)
-//
   DBG("writing, transNum = %d, blockId = %d\n", transNum, blockID);
   N->send(p);
-  if (pendingBlocks[blockID] != NULL) {
-    delete pendingBlocks[blockID];
-  }
-  if (blockID >= MAX_PAY_LOAD) {
+  if (blockID >= MAX_PENDING) {
     ERROR("overflow!!!!!!!!!!!!!!!!!!!");
     return -1;
+  }
+  if (pendingBlocks[blockID] != NULL) {
+    delete pendingBlocks[blockID];
   }
   this->pendingBlocks[blockID] = p;
   this->blockID++;

@@ -195,7 +195,7 @@ PacketBase * Network::receive() {
 
         }
         if (outOfOrder(p)) {
-
+          delete p;
           return NULL;
         } else
           return p;
